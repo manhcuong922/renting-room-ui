@@ -1,0 +1,24 @@
+.floors {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+
+.floorRow {
+  display: grid;
+  grid-template-columns: 72px 1fr auto;
+  align-items: end;
+  gap: var(--space-2);
+}
+
+.remove {
+  margin-bottom: 1px;
+}
+
+.error {
+  margin-bottom: var(--space-3);
+  color: var(--color-danger);
+  font-size: var(--text-xs);
+}

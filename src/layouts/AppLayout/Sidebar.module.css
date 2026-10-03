@@ -1,0 +1,231 @@
+/* ---------- Khung chung ---------- */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  width: var(--sidebar-width);
+  height: 100dvh;
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--color-border);
+}
+
+/* Desktop: dính cạnh trái, co giãn mượt khi thu gọn. */
+@media (min-width: 1024px) {
+  .sidebar {
+    position: sticky;
+    top: 0;
+    flex-shrink: 0;
+    transition: width var(--duration) var(--ease);
+  }
+}
+
+/* Mobile/tablet: drawer trượt từ trái. */
+.drawer {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: var(--z-drawer);
+  width: min(var(--sidebar-width), 86vw);
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  box-shadow: var(--shadow-lg);
+  transform: translateX(-100%);
+  visibility: hidden;
+  /* Đóng: ẩn sau khi trượt xong. Mở: hiện ngay để focus được vào drawer. */
+  transition:
+    transform 260ms var(--ease),
+    visibility 0s linear 260ms;
+}
+
+.drawer.open {
+  transform: none;
+  visibility: visible;
+  transition:
+    transform 260ms var(--ease),
+    visibility 0s;
+}
+
+/* ---------- Header / thương hiệu ---------- */
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: var(--topbar-height);
+  padding: 0 var(--space-3) 0 var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  flex: 1;
+  color: inherit;
+  border-radius: var(--radius-md);
+}
+
+.logo {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
+}
+
+.brandText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.brandName {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.brandSub {
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.closeButton {
+  flex-shrink: 0;
+}
+
+/* ---------- Menu ---------- */
+.nav {
+  flex: 1;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-3);
+  scrollbar-width: thin;
+}
+
+.section + .section {
+  margin-top: var(--space-4);
+}
+
+.sectionLabel {
+  padding: 0 var(--space-3) var(--space-2);
+  color: var(--color-text-subtle);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.link,
+.collapseButton {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 42px; /* vùng chạm ≥ 40px cho mobile */
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+  transition:
+    background-color var(--duration) var(--ease),
+    color var(--duration) var(--ease);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.link:hover,
+.collapseButton:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+.active,
+.active:hover {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.active::before {
+  content: '';
+  position: absolute;
+  left: calc(var(--space-3) * -1);
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--color-primary);
+}
+
+.linkIcon {
+  flex-shrink: 0;
+}
+
+.linkLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- Footer ---------- */
+.footer {
+  flex-shrink: 0;
+  padding: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+/* ---------- Trạng thái thu gọn (chỉ desktop) ---------- */
+.collapsed {
+  width: var(--sidebar-width-collapsed);
+}
+
+.collapsed .header {
+  justify-content: center;
+  padding: 0;
+}
+
+.collapsed .brand {
+  flex: 0;
+}
+
+.collapsed .brandText,
+.collapsed .linkLabel {
+  display: none;
+}
+
+.collapsed .sectionLabel {
+  height: 1px;
+  margin: 0 var(--space-2) var(--space-3);
+  padding: 0;
+  overflow: hidden;
+  background: var(--color-border);
+  color: transparent;
+}
+
+.collapsed .link,
+.collapsed .collapseButton {
+  justify-content: center;
+  padding: 0;
+}

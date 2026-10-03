@@ -1,0 +1,22 @@
+import { lazy } from 'react'
+
+// Mỗi trang là 1 chunk riêng (code splitting) — tải khi vào route.
+export const LoginPage = lazy(() => import('@/features/auth/pages/LoginPage'))
+export const ChangePasswordPage = lazy(() => import('@/features/auth/pages/ChangePasswordPage'))
+export const DashboardPage = lazy(() => import('@/features/dashboard/pages/DashboardPage'))
+export const PropertiesPage = lazy(() => import('@/features/properties/pages/PropertiesPage'))
+export const RoomsPage = lazy(() => import('@/features/rooms/pages/RoomsPage'))
+export const RentersPage = lazy(() => import('@/features/renters/pages/RentersPage'))
+export const ContractsPage = lazy(() => import('@/features/contracts/pages/ContractsPage'))
+export const ContractTemplatesPage = lazy(() => import('@/features/contract-templates/pages/ContractTemplatesPage'))
+export const MembersPage = lazy(() => import('@/features/members/pages/MembersPage'))
+export const OrganizationsPage = lazy(() => import('@/features/admin/pages/OrganizationsPage'))
+export const ProfilePage = lazy(() => import('@/features/profile/pages/ProfilePage'))
+export const OrganizationDetailPage = lazy(() => import('@/features/admin/pages/OrganizationDetailPage'))
+export const PropertyCreatePage = lazy(() => import('@/features/properties/pages/PropertyCreatePage'))
+export const PropertyDetailPage = lazy(() => import('@/features/properties/pages/PropertyDetailPage'))
+export const RoomDetailPage = lazy(() => import('@/features/rooms/pages/RoomDetailPage'))
+export const RenterDetailPage = lazy(() => import('@/features/renters/pages/RenterDetailPage'))
+export const ContractTemplateEditorPage = lazy(() => import('@/features/contract-templates/pages/ContractTemplateEditorPage'))
+export const ContractWizardPage = lazy(() => import('@/features/contracts/pages/ContractWizardPage'))
+export const ContractDetailPage = lazy(() => import('@/features/contracts/pages/ContractDetailPage'))

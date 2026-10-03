@@ -1,0 +1,143 @@
+.section + .section {
+  margin-top: var(--space-4);
+}
+
+.sectionHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.sectionHeadings {
+  min-width: 0;
+  flex: 1 1 220px;
+}
+
+.sectionTitle {
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+
+.sectionDescription {
+  margin-top: 2px;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.sectionActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.dl {
+  display: grid;
+  gap: var(--space-3) var(--space-6);
+  margin: 0;
+}
+
+@media (min-width: 640px) {
+  .dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dlSingle {
+    grid-template-columns: 1fr;
+  }
+
+  .dlFull {
+    grid-column: 1 / -1;
+  }
+}
+
+.dlItem dt {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.dlItem dd {
+  margin: 2px 0 0;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.toolbar > * {
+  flex: 1 1 180px;
+}
+
+.toolbar > :first-child {
+  flex: 2 1 240px;
+}
+
+@media (min-width: 1024px) {
+  .toolbar > * {
+    flex: 0 1 200px;
+  }
+
+  .toolbar > :first-child {
+    flex: 0 1 320px;
+  }
+}
+
+.secret {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.secretValue {
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+}
+
+.secretError {
+  color: var(--color-danger);
+  font-size: var(--text-xs);
+}
+
+.tempPassword {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.credential {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+}
+
+.credentialLabel {
+  grid-column: 1 / -1;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.credentialValue {
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.note {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
