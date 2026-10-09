@@ -21,3 +21,4 @@ export const ContractTemplateEditorPage = lazy(() => import('@/features/contract
 export const ContractWizardPage = lazy(() => import('@/features/contracts/pages/ContractWizardPage'))
 export const ContractDetailPage = lazy(() => import('@/features/contracts/pages/ContractDetailPage'))
 export const OrganizationSettingsPage = lazy(() => import('@/features/organization/pages/OrganizationSettingsPage'))
+export const ContractDataReviewPage = lazy(() => import('@/features/contracts/pages/ContractDataReviewPage'))

@@ -7,6 +7,7 @@ import NotFoundPage from '@/pages/NotFoundPage'
 import RouteErrorPage from '@/pages/RouteErrorPage'
 import {
   ChangePasswordPage,
+  ContractDataReviewPage,
   ContractDetailPage,
   ContractsPage,
   ContractWizardPage,
@@ -80,6 +81,11 @@ export const router = createBrowserRouter([
                   { path: 'renters/:id', element: <RenterDetailPage />, handle: { title: 'Hồ sơ người thuê', permission: Permission.RentersView } },
                   { path: 'contracts', element: <ContractsPage />, handle: { title: 'Hợp đồng', permission: Permission.ContractsView } },
                   { path: 'contracts/new', element: <ContractWizardPage />, handle: { title: 'Tạo hợp đồng', permission: Permission.ContractsManage } },
+                  {
+                    path: 'contracts/review',
+                    element: <ContractDataReviewPage />,
+                    handle: { title: 'Dữ liệu cần xem lại', permission: Permission.ContractsView },
+                  },
                   { path: 'contracts/:id', element: <ContractDetailPage />, handle: { title: 'Chi tiết hợp đồng', permission: Permission.ContractsView } },
                   {
                     path: 'contracts/:id/edit',

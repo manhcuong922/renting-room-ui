@@ -28,11 +28,12 @@ import {
   ROOM_STATUS,
   toOptions,
 } from '@/constants/enums'
+import { usePropertyFees } from '@/features/shared/queries'
 import { usePropertyOptions, usePropertyRooms } from '@/features/shared/queries'
 import { cx } from '@/lib/cx'
 import { formatDate, formatMoney } from '@/lib/format'
 import { CustomFieldInput } from '../components/CustomFieldInput'
-import { buildOccupants } from '../contractForm'
+import { buildOccupants, occupantWarnings } from '../contractForm'
 import styles from './Wizard.module.css'
 
 /** Bước 0 — chọn mẫu (quyết định tiêu đề, điều khoản, trường tùy biến) hoặc "Không dùng mẫu" + loại. */
@@ -114,7 +115,8 @@ export function RoomStep({ form, onSelectRoom, locked }) {
               <strong>Phòng {r.code}</strong>
               <span className={styles.muted}>
                 {r.floor ? `Tầng ${r.floor} · ` : ''}
-                {r.maxOccupants} người · {r.listedRent ? formatMoney(r.listedRent) : 'chưa có giá'}
+                {r.maxOccupants ? `Loại ${r.maxOccupants} người · ` : ''}
+                {r.listedRent ? formatMoney(r.listedRent) : 'chưa có giá'}
               </span>
               <span className={styles.badges}>
                 <Badge tone={ROOM_STATUS[r.status].tone}>{ROOM_STATUS[r.status].label}</Badge>
@@ -127,14 +129,21 @@ export function RoomStep({ form, onSelectRoom, locked }) {
   )
 }
 
-/** Bước 3 — thời hạn, giá, cọc, cài đặt thu (gợi ý từ phòng & khu). */
-export function TermsStep({ form, template, room, creating }) {
+/** Cài đặt kỳ thu của khu — chỉ đọc (HĐ không chọn riêng ngày chốt / thu trước–thu sau). */
+function propertyBillingText(property) {
+  if (!property) return null
+  const b = property.billing
+  return `Chốt ngày ${b.anchorDay} · ${CHARGE_MODE_LABELS[b.chargeMode]} · hạn ${b.paymentDueDays} ngày · kỳ lẻ ${PRORATION_MODE_LABELS[b.prorationMode].toLowerCase()}`
+}
+
+/** Bước 3 — thời hạn, giá, cọc (gợi ý từ phòng), tính tiền từ ngày; kỳ thu theo cài đặt của khu. */
+export function TermsStep({ form, template, room, property, creating }) {
   const v = form.values
   return (
     <>
       <FormSection title="Thời hạn">
         <FormGrid cols={3}>
-          <DateField label="Ngày bắt đầu" required hint="Cho phép nhập lại HĐ cũ tới 1 năm trước" {...form.field('startDate')} />
+          <DateField label="Ngày bắt đầu" required hint="Không trước hôm nay quá 1 năm (HĐ từ sổ cũ: tới 10 năm, điền “Tính tiền từ ngày”)" {...form.field('startDate')} />
           <DateField label="Ngày kết thúc" required={!v.indefinite} disabled={v.indefinite} {...form.field('endDate')} />
           <CheckboxField label="Không thời hạn" {...form.field('indefinite', { type: 'checkbox' })} />
           <DateField label="Ngày ký" hint="Trống = tự xác định khi kích hoạt" {...form.field('signedDate')} />
@@ -170,13 +179,17 @@ export function TermsStep({ form, template, room, creating }) {
         </FormGrid>
       </FormSection>
 
-      <FormSection title="Cài đặt thu" description="Gợi ý từ cài đặt của khu — chỉnh riêng cho hợp đồng này nếu cần.">
+      <FormSection
+        title="Kỳ thu"
+        description={`Theo cài đặt của khu (mọi hợp đồng dùng chung): ${propertyBillingText(property) ?? '…'}. Đổi ở tab Kỳ thu của khu.`}
+      >
         <FormGrid cols={3}>
-          <NumberField label="Ngày chốt kỳ thu" {...form.field('billing.anchorDay', { type: 'value' })} />
-          <SelectField label="Thu tiền phòng" options={toOptions(CHARGE_MODE_LABELS)} {...form.field('billing.chargeMode')} />
-          <NumberField label="Hạn đóng sau ngày chốt" suffix="ngày" {...form.field('billing.paymentDueDays', { type: 'value' })} />
-          <SelectField label="Tháng lẻ" options={toOptions(PRORATION_MODE_LABELS)} {...form.field('billing.prorationMode')} />
-          <NumberField label="Báo trước khi trả phòng" suffix="ngày" {...form.field('noticeDays', { type: 'value' })} />
+          <DateField
+            label="Tính tiền từ ngày"
+            hint="Trống = ngày bắt đầu. Dùng cho HĐ nhập từ sổ cũ / cho ở miễn phí vài ngày đầu — trước ngày này không tính tiền (cả điện nước)"
+            {...form.field('billingStartDate')}
+          />
+          <NumberField label="Báo trước khi trả phòng" suffix="ngày" hint="Gợi ý từ khu" {...form.field('noticeDays', { type: 'value' })} />
         </FormGrid>
       </FormSection>
 
@@ -261,31 +274,46 @@ export function DocumentStep({ form, template }) {
   )
 }
 
-/** Bước 5 — xem lại + cảnh báo trước khi lưu nháp (checklist kích hoạt). */
+function WarningList({ tone, title, items }) {
+  if (!items.length) return null
+  return (
+    <Alert tone={tone}>
+      <strong>{title}</strong>
+      <ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>
+        {items.map((w) => (
+          <li key={w}>{w}</li>
+        ))}
+      </ul>
+    </Alert>
+  )
+}
+
+/**
+ * Bước cuối — xem lại trước khi lưu nháp. Chặn kích hoạt: phòng bảo trì, chưa có người ở.
+ * Giấy tờ / pháp lý chỉ cảnh báo (09/10/2026): bên cho thuê, SĐT / tuổi người đứng tên, quan hệ người ở.
+ */
 export function ReviewStep({ form, template, room, property }) {
   const v = form.values
   const occupants = buildOccupants(v)
-  const warnings = [
+  const fees = usePropertyFees(v.propertyId).data ?? []
+  const feeName = new Map(fees.map((f) => [f.id, f.name]))
+  const blockers = [
     occupants.length === 0 && 'Chưa có người ở — kích hoạt cần ít nhất 1 người.',
-    room && occupants.length > room.maxOccupants && `Vượt sức chứa phòng (${occupants.length}/${room.maxOccupants}).`,
-    v.representative && !v.representative.phone && 'Người đại diện chưa có số điện thoại.',
     room?.status === 'Maintenance' && 'Phòng đang bảo trì — lưu nháp được nhưng chưa kích hoạt được.',
-    property && !property.lessor?.isComplete && 'Khu chưa khai báo đủ bên cho thuê — chưa kích hoạt được.',
+  ].filter(Boolean)
+  const softWarnings = [
+    v.representative && !v.representative.phone && 'Người đứng tên chưa có số điện thoại.',
+    property && !property.lessor?.isComplete && 'Chưa đủ thông tin bên cho thuê — chưa in được hợp đồng đầy đủ.',
+    ...Object.values(occupantWarnings(v)),
   ].filter(Boolean)
   const nameOf = new Map([[v.representative?.id, v.representative?.fullName], ...v.occupants.map((o) => [o.renter.id, o.renter.fullName])])
 
   return (
     <>
-      {warnings.length > 0 && (
+      {(blockers.length > 0 || softWarnings.length > 0) && (
         <div className={styles.stack}>
-          <Alert tone="warning">
-            <strong>Cần xử lý trước khi kích hoạt:</strong>
-            <ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>
-              {warnings.map((w) => (
-                <li key={w}>{w}</li>
-              ))}
-            </ul>
-          </Alert>
+          <WarningList tone="danger" title="Cần xử lý trước khi kích hoạt:" items={blockers} />
+          <WarningList tone="warning" title="Lưu ý (không chặn kích hoạt / thu tiền):" items={softWarnings} />
         </div>
       )}
       <FormSection title="Tóm tắt">
@@ -304,7 +332,12 @@ export function ReviewStep({ form, template, room, property }) {
             { label: 'Giá thuê', value: formatMoney(v.monthlyRent ?? room?.listedRent) },
             { label: 'Tiền cọc', value: template?.noDeposit ? 'Không cọc' : formatMoney(v.depositAmount ?? room?.defaultDeposit ?? 0) },
             { label: 'Phương thức thanh toán', value: v.paymentMethods.map((m) => PAYMENT_METHOD_LABELS[m]).join(', ') },
-            { label: 'Kỳ thu', value: `Chốt ngày ${v.billing.anchorDay} · ${CHARGE_MODE_LABELS[v.billing.chargeMode]} · hạn ${v.billing.paymentDueDays} ngày` },
+            { label: 'Kỳ thu (của khu)', value: propertyBillingText(property) },
+            { label: 'Tính tiền từ ngày', value: v.billingStartDate ? formatDate(v.billingStartDate) : 'Ngày bắt đầu' },
+            {
+              label: 'Khoản thu',
+              value: v.fees === null ? 'Theo các khoản tự gắn của khu' : v.fees.map((f) => feeName.get(f.feeTypeId) ?? '…').join(', ') || 'Không có',
+            },
           ]}
         />
       </FormSection>

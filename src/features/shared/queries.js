@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { propertiesApi, queryKeys, roomsApi } from '@/api'
+import { feesApi, metersApi, propertiesApi, queryKeys, roomsApi } from '@/api'
 
 // API giới hạn pageSize ≤ 100 → tải tuần tự đủ mọi trang (một khu có thể tới vài trăm phòng).
 async function fetchAllPages(fetchPage, signal) {
@@ -37,5 +37,24 @@ export function useRoomGroups(propertyId) {
     queryKey: queryKeys.rooms.groups(propertyId),
     queryFn: ({ signal }) => roomsApi.listGroups(propertyId, { signal }),
     enabled: Boolean(propertyId),
+  })
+}
+
+/** Danh mục khoản thu của khu (fees.md) — mảng FeeTypeDto, mặc định bỏ khoản ngừng dùng. */
+export function usePropertyFees(propertyId, { includeArchived = false } = {}) {
+  const params = { includeArchived: includeArchived || undefined }
+  return useQuery({
+    queryKey: queryKeys.fees.byProperty(propertyId, params),
+    queryFn: ({ signal }) => feesApi.listByProperty(propertyId, params, { signal }),
+    enabled: Boolean(propertyId),
+  })
+}
+
+/** Công tơ đang hoạt động của phòng kèm chỉ số mới nhất (meters.md) — dùng cho chỉ số nhận phòng / chỉ số cuối. */
+export function useRoomMeters(roomId, { enabled = true } = {}) {
+  return useQuery({
+    queryKey: queryKeys.rooms.meters(roomId),
+    queryFn: ({ signal }) => metersApi.listByRoom(roomId, undefined, { signal }),
+    enabled: Boolean(roomId) && enabled,
   })
 }

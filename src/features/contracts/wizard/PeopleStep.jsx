@@ -5,7 +5,7 @@ import { GENDER_LABELS, RELATIONSHIP_GROUPS } from '@/constants/enums'
 import { RenterPicker } from '@/features/renters/components/RenterPicker'
 import { ageAt } from '@/features/renters/renterForm'
 import { formatDate } from '@/lib/format'
-import { emptyOccupant, needsGuardianConsent, relationshipAllowed } from '../contractForm'
+import { emptyOccupant, needsGuardianConsent, occupantWarnings, relationshipAllowed } from '../contractForm'
 import styles from './Wizard.module.css'
 
 function relationshipOptions(gender) {
@@ -21,9 +21,12 @@ function relationshipOptions(gender) {
  * Bước 2 — người đại diện ký + người ở (docs/api/contracts.md#người-ở).
  * Người đại diện KHÔNG tự động là người ở → mặc định tích "cũng ở phòng này".
  * Mỗi người ở (trừ chủ hộ) khai quan hệ với chủ hộ; chủ hộ mặc định là người đứng tên.
+ * Quan hệ / SĐT / tuổi người đứng tên chỉ CẢNH BÁO (không chặn lưu, kích hoạt) — trừ người đứng tên chưa có giấy tờ (REPRESENTATIVE_ID_REQUIRED).
+ * Số người của phòng chỉ mô tả loại phòng — không giới hạn số người ở.
  */
-export function PeopleStep({ form, room }) {
+export function PeopleStep({ form }) {
   const v = form.values
+  const warnings = occupantWarnings(v)
   const [adding, setAdding] = useState(false)
   const rep = v.representative
   const headId = v.householdHeadRenterId || rep?.id
@@ -46,12 +49,15 @@ export function PeopleStep({ form, room }) {
 
   return (
     <>
-      <FormSection title="Người đại diện ký hợp đồng" description="Phải đủ 18 tuổi tại ngày ký và có số điện thoại.">
+      <FormSection title="Người đại diện ký hợp đồng" description="Phải có giấy tờ tùy thân. Nên đủ 18 tuổi tại ngày ký và có số điện thoại.">
         <RenterPicker label="Người đại diện" required value={rep} onChange={setRepresentative} error={form.errors.representative} />
         {rep && (
           <div className={styles.stack}>
-            {!rep.phone && <Alert tone="warning">Người đại diện chưa có số điện thoại — cần bổ sung trước khi kích hoạt.</Alert>}
-            {repAge !== null && repAge < 18 && <Alert tone="warning">Người đại diện chưa đủ 18 tuổi tại ngày bắt đầu — không kích hoạt được.</Alert>}
+            {rep.idType === null && <Alert>Người này chưa có giấy tờ — không đứng tên hợp đồng được. Bổ sung giấy tờ ở hồ sơ hoặc chọn người khác.</Alert>}
+            {!rep.phone && <Alert tone="warning">Người đại diện chưa có số điện thoại — nên bổ sung (không chặn kích hoạt).</Alert>}
+            {repAge !== null && repAge < 18 && (
+              <Alert tone="warning">Người đại diện chưa đủ 18 tuổi tại ngày bắt đầu — bản giấy cần người giám hộ ký thay.</Alert>
+            )}
             <CheckboxField
               label="Người đại diện cũng ở phòng này"
               description="Bỏ tích nếu người ký không ở (VD bố mẹ ký thuê cho con)."
@@ -67,14 +73,9 @@ export function PeopleStep({ form, room }) {
       </FormSection>
 
       <FormSection
-        title={`Người ở cùng (${occupantCount}${room ? `/${room.maxOccupants}` : ''})`}
-        description="Kích hoạt hợp đồng cần ít nhất 1 người ở. Quan hệ khai so với chủ hộ (theo Thông tư 55/2021/TT-BCA)."
+        title={`Người ở (${occupantCount})`}
+        description="Kích hoạt hợp đồng cần ít nhất 1 người ở. Quan hệ khai so với chủ hộ (theo Thông tư 55/2021/TT-BCA) — chưa khai vẫn lưu được, hệ thống nhắc sau."
       >
-        {room && occupantCount > room.maxOccupants && (
-          <div className={styles.stack}>
-            <Alert tone="warning">Vượt sức chứa phòng ({room.maxOccupants} người). Khi kích hoạt sẽ cần xác nhận vượt sức chứa.</Alert>
-          </div>
-        )}
 
         <ul className={styles.occupants}>
           {v.occupants.map((o, i) => {
@@ -104,17 +105,17 @@ export function PeopleStep({ form, room }) {
                   {!isHead && (
                     <SelectField
                       label="Quan hệ với chủ hộ"
-                      required
                       placeholder="Chọn…"
                       options={relationshipOptions(o.renter.gender)}
+                      hint={warnings[`occupants.${i}.relationshipType`]}
                       {...form.field(`occupants.${i}.relationshipType`)}
                     />
                   )}
                   {!isHead && (
                     <TextField
                       label={o.relationshipType === 'Other' ? 'Ghi rõ quan hệ' : 'Ghi chú quan hệ'}
-                      required={o.relationshipType === 'Other'}
                       maxLength={50}
+                      hint={warnings[`occupants.${i}.relationship`]}
                       placeholder="VD em gái, bạn học"
                       {...form.field(`occupants.${i}.relationship`)}
                     />
@@ -125,7 +126,7 @@ export function PeopleStep({ form, room }) {
                   <CheckboxField
                     className={styles.consent}
                     label="Đã có ý kiến đồng ý của cha, mẹ hoặc người giám hộ"
-                    description="Người chưa đủ 18 tuổi mà người đứng tên không phải cha/mẹ/giám hộ (Luật Cư trú 2020, Điều 28)."
+                    description="Người chưa đủ 18 tuổi mà người đứng tên không phải cha/mẹ/giám hộ (Luật Cư trú 2020, Điều 28) — nên có, không chặn lưu."
                     {...form.field(`occupants.${i}.guardianConsent`, { type: 'checkbox' })}
                   />
                 )}

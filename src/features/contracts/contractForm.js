@@ -8,11 +8,10 @@ export const WIZARD_STEPS = [
   { id: 'room', label: 'Phòng' },
   { id: 'people', label: 'Người thuê' },
   { id: 'terms', label: 'Điều khoản' },
+  { id: 'fees', label: 'Khoản thu' },
   { id: 'document', label: 'Thông tin theo mẫu' },
   { id: 'review', label: 'Xem lại' },
 ]
-
-export const DEFAULT_CONTRACT_BILLING = { anchorDay: 1, chargeMode: 'Prepaid', prorationMode: 'Daily', paymentDueDays: 5 }
 
 export const emptyOccupant = (renter) => ({
   renter,
@@ -46,8 +45,12 @@ export function emptyContractForm() {
     monthlyRent: null,
     depositAmount: null,
     depositTerms: '',
-    billing: { ...DEFAULT_CONTRACT_BILLING },
+    // "Tính tiền từ ngày" (K5) — trống = ngày bắt đầu. Ngày chốt / thu trước–thu sau là của khu, HĐ không chọn riêng.
+    billingStartDate: '',
     noticeDays: 30,
+    // Khoản thu cố định / theo số lượng gắn vào HĐ: [{ feeTypeId, quantity, unitPriceOverride }].
+    // null = chưa nạp danh mục của khu → server tự gắn các khoản "tự gắn".
+    fees: null,
     paymentMethods: ['Cash', 'BankTransfer'],
     copiesCount: 2,
     termsText: '',
@@ -96,8 +99,11 @@ export function draftToForm(c, renters, template) {
     monthlyRent: c.currentRent ?? c.rentTerms?.[0]?.monthlyRent ?? null,
     depositAmount: c.depositAmount,
     depositTerms: c.depositTerms ?? '',
-    billing: { ...c.billing },
+    billingStartDate: c.billingStartDate && c.billingStartDate !== c.startDate ? c.billingStartDate : '',
     noticeDays: c.noticeDays,
+    fees: (c.fees ?? [])
+      .filter((f) => !f.effectiveTo)
+      .map((f) => ({ feeTypeId: f.feeTypeId, quantity: f.chargeBasis === 'PerUnit' ? f.quantity : null, unitPriceOverride: f.unitPriceOverride })),
     paymentMethods: c.paymentMethods,
     copiesCount: c.copiesCount,
     termsText: c.termsText ?? '',
@@ -147,7 +153,7 @@ export function buildContractInput(v, template) {
     monthlyRent: v.monthlyRent,
     depositAmount: template?.noDeposit ? 0 : v.depositAmount,
     depositTerms: str(v.depositTerms),
-    billing: v.billing,
+    billingStartDate: v.billingStartDate || null,
     noticeDays: v.noticeDays,
     paymentMethods: v.paymentMethods,
     copiesCount: v.copiesCount,
@@ -155,6 +161,7 @@ export function buildContractInput(v, template) {
     note: str(v.note),
     occupants: buildOccupants(v),
     householdHeadRenterId: v.householdHeadRenterId || null,
+    fees: v.fees,
     templateId: v.templateId || null,
     contractType: v.templateId ? null : v.contractType,
     title: str(v.title),
@@ -177,34 +184,58 @@ export function relationshipAllowed(type, gender) {
 
 const inRange = (n, min, max) => Number.isInteger(n) && n >= min && n <= max
 
+/**
+ * Cảnh báo mềm về quan hệ người ở (contracts.md#kiểm-tra-của-server-cảnh-báo-không-chặn--09102026) — KHÔNG chặn lưu / kích hoạt.
+ * Trả { 'occupants.{i}.relationshipType': 'câu cảnh báo' }.
+ */
+export function occupantWarnings(v) {
+  const w = {}
+  const headId = v.householdHeadRenterId || v.representative?.id
+  v.occupants.forEach((o, i) => {
+    if (o.renter.id === headId) return
+    if (!o.relationshipType) w[`occupants.${i}.relationshipType`] = 'Chưa khai quan hệ với chủ hộ.'
+    else if (o.relationshipType === 'Other' && !o.relationship.trim()) w[`occupants.${i}.relationship`] = 'Nên ghi rõ quan hệ.'
+    else if (!relationshipAllowed(o.relationshipType, o.renter.gender)) w[`occupants.${i}.relationshipType`] = 'Quan hệ không khớp giới tính.'
+    if (needsGuardianConsent(o, v.startDate) && !o.guardianConsent) w[`occupants.${i}.guardianConsent`] = 'Người chưa đủ 18 tuổi — nên có ý kiến đồng ý của cha mẹ / người giám hộ.'
+  })
+  return w
+}
+
 export function validateStep(step, v, { template, room } = {}) {
   const e = {}
   if (step === 'room' && !v.roomId) e.roomId = 'Chọn phòng.'
   if (step === 'people') {
     if (!v.representative) e.representative = 'Chọn người đại diện ký hợp đồng.'
-    const headId = v.householdHeadRenterId || v.representative?.id
+    // Người chưa có giấy tờ (trẻ < 14 tuổi) không đứng tên được (REPRESENTATIVE_ID_REQUIRED).
+    else if (v.representative.idType === null) e.representative = 'Người chưa có giấy tờ không đứng tên hợp đồng được — bổ sung giấy tờ ở hồ sơ.'
     v.occupants.forEach((o, i) => {
-      if (o.renter.id === headId) return
-      if (!o.relationshipType) e[`occupants.${i}.relationshipType`] = 'Chọn quan hệ với chủ hộ.'
-      else if (o.relationshipType === 'Other' && !o.relationship.trim()) e[`occupants.${i}.relationship`] = 'Ghi rõ quan hệ.'
-      else if (!relationshipAllowed(o.relationshipType, o.renter.gender)) e[`occupants.${i}.relationshipType`] = 'Quan hệ không khớp giới tính.'
-      if (needsGuardianConsent(o, v.startDate) && !o.guardianConsent) e[`occupants.${i}.guardianConsent`] = 'Người chưa đủ 18 tuổi cần ý kiến đồng ý của cha mẹ / người giám hộ.'
       if (o.moveInDate && o.moveInDate < v.startDate) e[`occupants.${i}.moveInDate`] = 'Không trước ngày bắt đầu hợp đồng.'
     })
   }
   if (step === 'terms') {
+    const today = todayVN()
     if (!v.startDate) e.startDate = 'Nhập ngày bắt đầu.'
+    else if (!v.billingStartDate && v.startDate < addMonths(today, -12))
+      e.startDate = 'Không trước hôm nay quá 1 năm — HĐ nhập từ sổ cũ thì điền "Tính tiền từ ngày".'
     if (!v.indefinite && (!v.endDate || v.endDate <= v.startDate)) e.endDate = 'Ngày kết thúc phải sau ngày bắt đầu (hoặc chọn không thời hạn).'
+    if (v.billingStartDate) {
+      if (v.billingStartDate < v.startDate || (!v.indefinite && v.endDate && v.billingStartDate > v.endDate))
+        e.billingStartDate = 'Phải nằm trong thời gian hợp đồng.'
+      else if (v.billingStartDate < addMonths(today, -12)) e.billingStartDate = 'Không trước hôm nay quá 1 năm.'
+    }
     if (v.signedDate && v.signedDate > todayVN()) e.signedDate = 'Ngày ký không ở tương lai.'
     if (v.effectiveDate && v.signedDate && v.effectiveDate < v.signedDate) e.effectiveDate = 'Ngày hiệu lực không trước ngày ký.'
     if (v.monthlyRent === null && !room?.listedRent) e.monthlyRent = 'Phòng chưa có giá niêm yết — nhập giá thuê.'
     if (v.monthlyRent !== null && v.monthlyRent <= 0) e.monthlyRent = 'Giá thuê phải lớn hơn 0.'
     if (!template?.noDeposit && v.depositAmount && v.monthlyRent && v.depositAmount > v.monthlyRent * 12) e.depositAmount = 'Tối đa 12 tháng tiền thuê.'
-    if (!inRange(v.billing.anchorDay, 1, 31)) e['billing.anchorDay'] = 'Từ 1 đến 31.'
-    if (!inRange(v.billing.paymentDueDays, 0, 60)) e['billing.paymentDueDays'] = 'Từ 0 đến 60.'
     if (!inRange(v.noticeDays, 0, 180)) e.noticeDays = 'Từ 0 đến 180.'
     if (!v.paymentMethods.length) e.paymentMethods = 'Chọn ít nhất một phương thức.'
     if (!inRange(v.copiesCount, 1, 10)) e.copiesCount = 'Từ 1 đến 10 bản.'
+  }
+  if (step === 'fees') {
+    for (const f of v.fees ?? []) {
+      if (f.quantity !== null && (f.quantity < 0 || f.quantity > 100)) e[`fee.${f.feeTypeId}.quantity`] = 'Từ 0 đến 100.'
+    }
   }
   if (step === 'document') {
     for (const f of template?.fields ?? []) {
@@ -226,6 +257,7 @@ export function stepOfField(key) {
   if (/^(roomId)/.test(key)) return 'room'
   if (/^(representative|occupants|householdHead)/.test(key)) return 'people'
   if (/^(customFields|title|clauses|termsText)/.test(key)) return 'document'
+  if (/^fees?(\.|$)/.test(key)) return 'fees'
   if (/^(templateId|contractType)/.test(key)) return 'template'
   return 'terms'
 }

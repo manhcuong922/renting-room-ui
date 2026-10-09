@@ -10,9 +10,27 @@ import { useForm } from '@/hooks/useForm'
 import { useIdempotencyKey } from '@/hooks/useIdempotencyKey'
 import { cx } from '@/lib/cx'
 import { WIZARD_STEPS, buildContractInput, draftToForm, emptyContractForm, remapServerErrors, stepOfField, validateStep } from '../contractForm'
+import { FeesStep } from '../wizard/FeesStep'
 import { PeopleStep } from '../wizard/PeopleStep'
 import { DocumentStep, ReviewStep, RoomStep, TemplateStep, TermsStep } from '../wizard/WizardSteps'
 import styles from '../wizard/Wizard.module.css'
+
+// Lỗi nghiệp vụ → ô hiển thị (và bước wizard chứa ô đó).
+const CODE_FIELDS = {
+  MONTHLY_RENT_REQUIRED: 'monthlyRent',
+  DEPOSIT_NOT_ALLOWED: 'depositAmount',
+  DEPOSIT_TOO_HIGH: 'depositAmount',
+  CONTRACT_NO_TAKEN: 'contractNo',
+  ROOM_ARCHIVED: 'roomId',
+  CONTRACT_TEMPLATE_ARCHIVED: 'templateId',
+  HOUSEHOLD_HEAD_NOT_OCCUPANT: 'householdHeadRenterId',
+  REPRESENTATIVE_ID_REQUIRED: 'representative',
+  INVALID_BILLING_START_DATE: 'billingStartDate',
+  FEE_NOT_IN_PROPERTY: 'fees',
+  FEE_ARCHIVED: 'fees',
+  FEE_METERED_FOLLOWS_ROOM: 'fees',
+  INVALID_QUANTITY: 'fees',
+}
 
 /** /contracts/new[?roomId=] (tạo nháp) hoặc /contracts/:id/edit (sửa nháp). */
 export default function ContractWizardPage() {
@@ -59,17 +77,7 @@ function Wizard({ initial, contract, presetRoomId }) {
   const invalidate = useInvalidate()
   const idem = useIdempotencyKey()
   const [stepIndex, setStepIndex] = useState(editing ? 2 : 0)
-  const form = useForm(initial, {
-    codeFields: {
-      MONTHLY_RENT_REQUIRED: 'monthlyRent',
-      DEPOSIT_NOT_ALLOWED: 'depositAmount',
-      DEPOSIT_TOO_HIGH: 'depositAmount',
-      CONTRACT_NO_TAKEN: 'contractNo',
-      ROOM_ARCHIVED: 'roomId',
-      CONTRACT_TEMPLATE_ARCHIVED: 'templateId',
-      HOUSEHOLD_HEAD_NOT_OCCUPANT: 'householdHeadRenterId',
-    },
-  })
+  const form = useForm(initial, { codeFields: CODE_FIELDS })
   const v = form.values
   const step = WIZARD_STEPS[stepIndex].id
 
@@ -89,17 +97,17 @@ function Wizard({ initial, contract, presetRoomId }) {
     enabled: Boolean(v.propertyId),
   }).data
 
-  // Chọn phòng → gợi ý giá / cọc từ phòng, cài đặt thu từ khu (chỉ khi tạo mới).
+  // Chọn phòng → gợi ý giá / cọc từ phòng, số ngày báo trước từ khu (chỉ khi tạo mới).
+  // Kỳ thu là của khu (HĐ không chọn riêng). Đổi khu → nạp lại khoản "tự gắn" của khu mới ở bước Khoản thu.
   const selectRoom = async (r) => {
+    if (r.propertyId !== v.propertyId) form.setValue('fees', null)
     form.setValue('roomId', r.id)
     form.setValue('propertyId', r.propertyId)
     if (editing) return
     form.setValue('monthlyRent', r.listedRent ?? null)
     if (!template?.noDeposit) form.setValue('depositAmount', r.defaultDeposit ?? null)
     const p = await queryClient.fetchQuery({ queryKey: queryKeys.properties.detail(r.propertyId), queryFn: () => propertiesApi.get(r.propertyId) })
-    const { anchorDay, chargeMode, prorationMode, paymentDueDays, noticeDays } = p.billing
-    form.setValue('billing', { anchorDay, chargeMode, prorationMode, paymentDueDays })
-    form.setValue('noticeDays', noticeDays)
+    form.setValue('noticeDays', p.billing.noticeDays)
   }
 
   const selectTemplate = (t) => {
@@ -172,7 +180,7 @@ function Wizard({ initial, contract, presetRoomId }) {
     } catch (error) {
       // Index người ở của server lệch với form khi người đứng tên ở cùng → chuyển lại key, rồi nhảy tới bước có lỗi.
       if (error.errors) error.errors = remapServerErrors(error.errors, repIncluded)
-      const firstKey = Object.keys(error.errors ?? {})[0]
+      const firstKey = Object.keys(error.errors ?? {})[0] ?? CODE_FIELDS[error.code]
       if (firstKey) setStepIndex(WIZARD_STEPS.findIndex((s) => s.id === stepOfField(firstKey)))
       throw error
     }
@@ -216,8 +224,9 @@ function Wizard({ initial, contract, presetRoomId }) {
         )}
         {step === 'template' && <TemplateStep form={form} templates={templates} onSelectTemplate={selectTemplate} />}
         {step === 'room' && <RoomStep form={form} onSelectRoom={selectRoom} locked={editing} />}
-        {step === 'people' && <PeopleStep form={form} room={room} />}
-        {step === 'terms' && <TermsStep form={form} template={template} room={room} creating={!editing} />}
+        {step === 'people' && <PeopleStep form={form} />}
+        {step === 'terms' && <TermsStep form={form} template={template} room={room} property={property} creating={!editing} />}
+        {step === 'fees' && <FeesStep form={form} propertyId={v.propertyId} />}
         {step === 'document' && <DocumentStep form={form} template={template} />}
         {step === 'review' && <ReviewStep form={form} template={template} room={room} property={property} />}
       </Card>

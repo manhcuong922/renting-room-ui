@@ -19,16 +19,41 @@ import { formatContractTerm } from '../contractRules'
 import { formatCustomValue } from '../contractForm'
 import { useBillingPeriods } from '../hooks'
 
-export function OverviewTab({ contract: c, actions, onEditNote }) {
+// Cảnh báo mềm → nơi xử lý (contracts.md#giấy-tờ--pháp-lý-chỉ-cảnh-báo-09102026).
+function warningAction(w, c, { onSignedDocument }) {
+  if (w.code === 'LESSOR_INFO_INCOMPLETE') return <Link to={`/properties/${c.propertyId}?tab=lessor`}>Bên cho thuê</Link>
+  if (w.code === 'REPRESENTATIVE_PHONE_MISSING') return <Link to={`/renters/${c.representativeRenterId}`}>Sửa hồ sơ</Link>
+  if (w.code === 'SIGNED_DOCUMENT_MISSING' && onSignedDocument)
+    return (
+      <Button size="sm" variant="ghost" onClick={onSignedDocument}>
+        Đã có bản ký
+      </Button>
+    )
+  return null
+}
+
+export function ContractWarnings({ contract: c, onSignedDocument }) {
+  if (!c.warnings?.length) return null
+  return (
+    <Alert tone="warning">
+      <strong>Lưu ý (không chặn kích hoạt / thu tiền):</strong>
+      <ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>
+        {c.warnings.map((w, i) => (
+          <li key={`${w.code}-${i}`}>
+            {w.message ?? CONTRACT_WARNING_LABELS[w.code] ?? w.code} {warningAction(w, c, { onSignedDocument })}
+          </li>
+        ))}
+      </ul>
+    </Alert>
+  )
+}
+
+export function OverviewTab({ contract: c, actions, onEditNote, onSignedDocument }) {
   return (
     <>
       {c.warnings?.length > 0 && (
         <div style={{ marginBottom: 'var(--space-4)' }}>
-          <Alert tone="warning">
-            {c.warnings.map((w) => (
-              <div key={w.code}>{w.message ?? CONTRACT_WARNING_LABELS[w.code] ?? w.code}</div>
-            ))}
-          </Alert>
+          <ContractWarnings contract={c} onSignedDocument={actions.signedDocument ? onSignedDocument : undefined} />
         </div>
       )}
       <Section title="Thời hạn & tiền thuê">
@@ -40,17 +65,46 @@ export function OverviewTab({ contract: c, actions, onEditNote }) {
             { label: 'Ngày hiệu lực', value: c.effectiveDate ? formatDate(c.effectiveDate) : null },
             { label: 'Giá thuê hiện tại', value: formatMoney(c.currentRent) },
             { label: 'Tiền cọc', value: c.depositAmount ? formatMoney(c.depositAmount) : 'Không cọc' },
+            { label: 'Cọc đang giữ', value: formatMoney(c.depositHeld), hidden: !c.depositHeld },
             { label: 'Điều kiện hoàn cọc', value: c.depositTerms, full: true },
+            {
+              label: 'Ở tiếp chưa ký lại',
+              value: c.holdoverSince ? `Từ ${formatDate(c.holdoverSince)}${c.holdoverNote ? ` — ${c.holdoverNote}` : ''}` : null,
+              hidden: !c.holdoverSince,
+              full: true,
+            },
+            {
+              label: 'Hợp đồng trước',
+              value: c.previousContractId ? <Link to={`/contracts/${c.previousContractId}`}>Xem hợp đồng trước</Link> : null,
+              hidden: !c.previousContractId,
+            },
           ]}
         />
       </Section>
-      <Section title="Cài đặt thu">
+      <Section
+        title="Bản hợp đồng đã ký"
+        actions={
+          actions.signedDocument && (
+            <Button size="sm" variant="ghost" icon={Pencil} onClick={onSignedDocument}>
+              Cập nhật
+            </Button>
+          )
+        }
+      >
+        <p style={{ color: c.hasSignedDocument ? undefined : 'var(--color-text-muted)' }}>
+          {c.hasSignedDocument
+            ? `Đã có bản ký${c.signedDocumentNote ? ` — ${c.signedDocumentNote}` : ''}.`
+            : 'Chưa có bản ký (nhãn “Thiếu tài liệu”, không ảnh hưởng thu tiền).'}
+        </p>
+      </Section>
+      <Section title="Kỳ thu" description="Ngày chốt / thu trước–thu sau / hạn thanh toán là cài đặt của khu — mọi hợp đồng của khu dùng chung.">
         <DescriptionList
           items={[
+            { label: 'Tính tiền từ ngày', value: formatDate(c.billingStartDate ?? c.startDate) },
             { label: 'Ngày chốt kỳ thu', value: `Ngày ${c.billing.anchorDay}` },
             { label: 'Thu tiền phòng', value: CHARGE_MODE_LABELS[c.billing.chargeMode] },
             { label: 'Hạn đóng', value: `${c.billing.paymentDueDays} ngày sau ngày chốt` },
-            { label: 'Tháng lẻ', value: PRORATION_MODE_LABELS[c.billing.prorationMode] },
+            { label: 'Kỳ lẻ', value: PRORATION_MODE_LABELS[c.billing.prorationMode] },
             { label: 'Báo trước khi trả phòng', value: `${c.noticeDays} ngày` },
             { label: 'Phương thức thanh toán', value: c.paymentMethods.map((m) => PAYMENT_METHOD_LABELS[m]).join(', ') },
             { label: 'Số bản hợp đồng', value: c.copiesCount },
@@ -141,14 +195,20 @@ export function PartiesTab({ contract: c }) {
         actions={
           draft && (
             <Link to={`/properties/${c.propertyId}?tab=lessor`} style={{ fontSize: 'var(--text-sm)' }}>
-              Sửa bên cho thuê
+              Bên cho thuê của khu
             </Link>
           )
         }
       >
         {c.lessor && <LessorList lessor={c.lessor} />}
         {!c.lessor && draft && property.data?.lessor && <LessorList lessor={{ ...property.data.lessor, bankAccount: property.data.bankAccount }} />}
-        {!c.lessor && draft && property.data && !property.data.lessor && <Alert tone="warning">Khu chưa khai báo bên cho thuê — chưa kích hoạt được.</Alert>}
+        {!c.lessor && draft && property.data && !property.data.lessor && (
+          <Alert tone="warning">
+            Chưa khai thông tin bên cho thuê — vẫn kích hoạt được nhưng chưa in được hợp đồng đầy đủ.{' '}
+            <Link to="/organization?tab=lessor">Khai thông tin chủ trọ</Link>
+          </Alert>
+        )}
+        {!c.lessor && !draft && <p style={{ color: 'var(--color-text-muted)' }}>Lúc kích hoạt khu chưa khai bên cho thuê — không có bản chụp.</p>}
       </Section>
       <Section title="Bên thuê (bên B)">
         {c.representativeAtSigning ? (
@@ -174,7 +234,7 @@ export function PartiesTab({ contract: c }) {
             { label: 'Khu / phòng', value: <Link to={`/rooms/${c.roomId}`}>{`${c.propertyCode} · Phòng ${c.roomCode}`}</Link> },
             { label: 'Tầng', value: c.roomAtSigning?.floor },
             { label: 'Diện tích', value: c.roomAtSigning?.areaM2 ? `${c.roomAtSigning.areaM2} m²` : null },
-            { label: 'Sức chứa', value: c.roomAtSigning?.maxOccupants ? `${c.roomAtSigning.maxOccupants} người` : null },
+            { label: 'Số người (loại phòng)', value: c.roomAtSigning?.maxOccupants ? `${c.roomAtSigning.maxOccupants} người` : null },
           ]}
         />
       </Section>
@@ -203,11 +263,11 @@ export function RentTermsTab({ contract: c, actions, onAdd }) {
   return (
     <Section
       title="Giá thuê theo thời gian"
-      description="Đổi giá qua phụ lục; không sửa giá niêm yết của phòng."
+      description="Giá mới áp từ kỳ chưa lập phiếu (hoặc hẹn từ một kỳ); kỳ đã lập phiếu giữ giá cũ. Không sửa giá niêm yết của phòng."
       actions={
         actions.changeRent && (
           <Button size="sm" icon={Plus} onClick={onAdd}>
-            Phụ lục đổi giá
+            Sửa giá thuê
           </Button>
         )
       }
@@ -232,9 +292,13 @@ export function BillingTab({ contract: c }) {
       ),
     },
     { key: 'range', header: 'Từ – đến', cell: (p) => `${formatDate(p.start)} – ${formatDate(p.end)}` },
+    { key: 'days', header: 'Số ngày', align: 'right', cell: (p) => p.days ?? '—' },
   ]
   return (
-    <Section title="Kỳ thu" description="Kỳ chạy từ ngày chốt tới trước ngày chốt kế tiếp; kỳ đầu lẻ nếu ngày bắt đầu không trùng ngày chốt.">
+    <Section
+      title="Kỳ thu"
+      description="Kỳ chuẩn của khu cắt theo “tính tiền từ ngày” và ngày trả phòng. Kỳ đầu lẻ không gộp vào kỳ sau và thuộc tháng thu của khu; khu đổi ngày chốt có kỳ chuyển tiếp."
+    >
       <QueryView query={query} isEmpty={(d) => d.length === 0} empty={<EmptyState title="Chưa có kỳ thu" />}>
         {(periods) => <DataTable columns={columns} rows={periods} rowKey={(p) => p.start} caption="Kỳ thu" />}
       </QueryView>

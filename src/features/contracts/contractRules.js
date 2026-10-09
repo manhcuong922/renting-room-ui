@@ -5,6 +5,7 @@ export function contractActions(c) {
   const draft = c.status === 'Draft'
   const active = c.status === 'Active'
   const liquidating = c.status === 'Liquidating'
+  const flags = c.flags ?? []
   return {
     edit: draft,
     editNote: c.status !== 'Cancelled',
@@ -17,10 +18,18 @@ export function contractActions(c) {
     addVehicle: draft || active,
     endVehicle: draft || active || liquidating,
     changeRent: active,
+    changeFees: active,
     extend: active && Boolean(c.endDate),
+    // Quá hạn mà chủ trọ chưa quyết định → "Cho ở tiếp, chưa ký lại".
+    holdover: active && flags.includes('ExpiredAwaitingDecision'),
+    // Ký lại cho người còn ở (hay dùng khi người ký đã rời đi).
+    reSign: active,
+    signedDocument: c.status !== 'Cancelled',
+    downloadDocument: c.status !== 'Cancelled',
     notice: active,
     startLiquidation: active,
     cancelLiquidation: liquidating,
+    finalInvoice: liquidating,
     completeLiquidation: liquidating,
     // Hoàn tất được từ ngày trả phòng (LIQUIDATION_BEFORE_END_DATE).
     canCompleteToday: liquidating && Boolean(c.actualEndDate) && todayVN() >= c.actualEndDate,

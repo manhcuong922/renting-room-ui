@@ -1,4 +1,4 @@
-import { FilePlus, FileText, Search } from 'lucide-react'
+import { FilePlus, FileText, ListChecks, Search } from 'lucide-react'
 import { Link } from 'react-router'
 import {
   ButtonLink,
@@ -29,11 +29,13 @@ const QUICK_FILTERS = [
   { value: 'expiring', label: 'Sắp hết hạn (30 ngày)' },
   { value: 'overdue', label: 'Quá hạn' },
   { value: 'noDeposit', label: 'Không cọc' },
+  { value: 'missingDoc', label: 'Thiếu tài liệu' },
 ]
 const QUICK_QUERY = {
   expiring: { expiringWithinDays: 30 },
   overdue: { overdue: true },
   noDeposit: { hasDeposit: false },
+  missingDoc: { missingSignedDocument: true },
 }
 
 const COLUMNS = [
@@ -81,9 +83,14 @@ export default function ContractsPage() {
         title="Hợp đồng"
         description="Tạo, kích hoạt, phụ lục, báo trả phòng và thanh lý hợp đồng thuê."
         actions={
-          <ButtonLink to="/contracts/new" icon={FilePlus}>
-            Tạo hợp đồng
-          </ButtonLink>
+          <>
+            <ButtonLink to="/contracts/review" variant="secondary" icon={ListChecks}>
+              Cần xem lại
+            </ButtonLink>
+            <ButtonLink to="/contracts/new" icon={FilePlus}>
+              Tạo hợp đồng
+            </ButtonLink>
+          </>
         }
       />
 

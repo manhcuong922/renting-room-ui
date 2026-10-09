@@ -3,7 +3,6 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import { contractsApi } from '@/api'
 import {
-  Alert,
   Badge,
   Button,
   CheckboxField,
@@ -126,8 +125,8 @@ export function OccupantsTab({ contract: c, actions, refresh }) {
   )
 }
 
+// Không giới hạn số người ở (PR-BR-06). Quan hệ / đồng ý giám hộ chỉ cảnh báo — không chặn (09/10/2026).
 function AddOccupantDialog({ contract: c, onClose, onDone }) {
-  const [capacityExceeded, setCapacityExceeded] = useState(false)
   const usedIds = c.occupants.filter((o) => !o.moveOutDate).map((o) => o.renterId)
   const defaultMoveIn = c.startDate > todayVN() ? c.startDate : todayVN()
 
@@ -136,32 +135,23 @@ function AddOccupantDialog({ contract: c, onClose, onDone }) {
       title="Thêm người ở"
       description="Quan hệ khai so với chủ hộ của hợp đồng."
       size="md"
-      initial={{ renter: null, moveInDate: defaultMoveIn, expectedEndDate: '', relationshipType: '', relationship: '', guardianConsent: false, note: '', overrideCapacity: false }}
+      initial={{ renter: null, moveInDate: defaultMoveIn, expectedEndDate: '', relationshipType: '', relationship: '', guardianConsent: false, note: '' }}
       validate={(v) => ({
         renter: !v.renter ? 'Chọn người ở.' : null,
         moveInDate: !v.moveInDate ? 'Chọn ngày vào ở.' : v.moveInDate < c.startDate ? 'Không trước ngày bắt đầu hợp đồng.' : null,
-        relationshipType: v.renter && v.renter.id !== c.representativeRenterId && !v.relationshipType ? 'Chọn quan hệ với chủ hộ.' : null,
-        relationship: v.relationshipType === 'Other' && !v.relationship.trim() ? 'Ghi rõ quan hệ.' : null,
-        guardianConsent: v.renter && needsGuardianConsent(v, c.startDate) && !v.guardianConsent ? 'Cần ý kiến đồng ý của cha mẹ / người giám hộ.' : null,
       })}
+      codeFields={{ CONTRACT_EXPIRED_EXTEND_FIRST: 'moveInDate', OCCUPANT_LIVES_ELSEWHERE: 'renter', OCCUPANCY_OVERLAP: 'renter' }}
       submitLabel="Thêm người ở"
       onSubmit={async (v) => {
-        try {
-          await contractsApi.addOccupant(c.id, {
-            renterId: v.renter.id,
-            moveInDate: v.moveInDate,
-            expectedEndDate: v.expectedEndDate || null,
-            relationshipType: v.relationshipType || null,
-            relationship: v.relationship.trim() || null,
-            guardianConsent: v.guardianConsent,
-            note: v.note.trim() || null,
-            overrideCapacity: v.overrideCapacity,
-          })
-        } catch (error) {
-          // Vượt sức chứa → người dùng xác nhận "vẫn thêm" rồi gửi lại với overrideCapacity.
-          if (error.code === 'ROOM_CAPACITY_EXCEEDED') setCapacityExceeded(true)
-          throw error
-        }
+        await contractsApi.addOccupant(c.id, {
+          renterId: v.renter.id,
+          moveInDate: v.moveInDate,
+          expectedEndDate: v.expectedEndDate || null,
+          relationshipType: v.relationshipType || null,
+          relationship: v.relationship.trim() || null,
+          guardianConsent: v.guardianConsent,
+          note: v.note.trim() || null,
+        })
         await onDone()
       }}
       onClose={onClose}
@@ -176,19 +166,23 @@ function AddOccupantDialog({ contract: c, onClose, onDone }) {
               <DateField label="Dự kiến ở đến" {...form.field('expectedEndDate')} />
               {v.renter && v.renter.id !== c.representativeRenterId && (
                 <>
-                  <SelectField label="Quan hệ với chủ hộ" required placeholder="Chọn…" options={relationshipOptions(v.renter.gender)} {...form.field('relationshipType')} />
-                  <TextField label={v.relationshipType === 'Other' ? 'Ghi rõ quan hệ' : 'Ghi chú quan hệ'} required={v.relationshipType === 'Other'} maxLength={50} {...form.field('relationship')} />
+                  <SelectField
+                    label="Quan hệ với chủ hộ"
+                    placeholder="Chọn…"
+                    hint={!v.relationshipType ? 'Nên khai — chưa khai vẫn lưu được, hệ thống nhắc sau' : undefined}
+                    options={relationshipOptions(v.renter.gender)}
+                    {...form.field('relationshipType')}
+                  />
+                  <TextField label={v.relationshipType === 'Other' ? 'Ghi rõ quan hệ' : 'Ghi chú quan hệ'} maxLength={50} {...form.field('relationship')} />
                 </>
               )}
             </FormGrid>
             {v.renter && needsGuardianConsent(v, c.startDate) && (
-              <CheckboxField label="Đã có ý kiến đồng ý của cha, mẹ hoặc người giám hộ" {...form.field('guardianConsent', { type: 'checkbox' })} />
-            )}
-            {capacityExceeded && (
-              <>
-                <Alert tone="warning">Phòng đã đủ sức chứa. Xác nhận nếu vẫn muốn thêm (VD gia đình có con nhỏ) — thao tác được ghi log.</Alert>
-                <CheckboxField label="Tôi xác nhận vượt sức chứa phòng" {...form.field('overrideCapacity', { type: 'checkbox' })} />
-              </>
+              <CheckboxField
+                label="Đã có ý kiến đồng ý của cha, mẹ hoặc người giám hộ"
+                description="Người chưa đủ 18 tuổi — nên có, không chặn lưu."
+                {...form.field('guardianConsent', { type: 'checkbox' })}
+              />
             )}
           </>
         )
