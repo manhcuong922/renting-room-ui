@@ -30,7 +30,7 @@ function FeeRow({ fee, selected, error, onToggle, onChange }) {
               decimals={2}
               suffix={fee.unit}
               value={selected.quantity}
-              onChange={(n) => onChange({ quantity: n ?? 0 })}
+              onChange={(n) => onChange({ quantity: n })}
               error={error}
             />
           )}

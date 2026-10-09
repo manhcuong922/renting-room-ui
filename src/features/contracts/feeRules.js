@@ -1,6 +1,11 @@
 // Khoản thu của hợp đồng (docs/api/contracts.md#khoản-thu-của-hợp-đồng, fees.md).
 import { formatMoney } from '@/lib/format'
 
+/** Số gói của dịch vụ theo số lượng: > 0, ≤ 100, tối đa 2 số lẻ (ContractFeeRules.IsValidQuantity). */
+export function validFeeQuantity(q) {
+  return q > 0 && q <= 100 && Math.round(q * 100) === q * 100
+}
+
 /** "3.500 đ/kWh" · "giá bậc từ 1.984 đ/kWh" · null khi chưa có giá. */
 export function formatFeePrice(price, unit) {
   if (!price) return null

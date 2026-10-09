@@ -36,7 +36,7 @@ export function toTemplateBody(v) {
   return {
     name: v.name.trim(),
     contractType: v.contractType,
-    title: v.title.trim() || null,
+    title: v.title.trim(),
     noDeposit: v.noDeposit,
     clauses: v.clauses.map((c) => ({ heading: c.heading.trim(), body: c.body.trim() })),
     fields: v.fields.map((f) => ({
@@ -54,7 +54,8 @@ export function toTemplateBody(v) {
 export function validateTemplate(v) {
   const errors = {
     name: !v.name.trim() ? 'Nhập tên mẫu.' : null,
-    title: v.title.length > 200 ? 'Tiêu đề ≤ 200 ký tự.' : null,
+    // BE: Title là RequiredText(200) — không gửi rỗng.
+    title: !v.title.trim() ? 'Nhập tiêu đề in trên hợp đồng.' : v.title.length > 200 ? 'Tiêu đề ≤ 200 ký tự.' : null,
   }
   v.clauses.forEach((c, i) => {
     if (!c.heading.trim()) errors[`clauses.${i}.heading`] = 'Nhập tiêu đề điều khoản.'

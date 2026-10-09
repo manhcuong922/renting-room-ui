@@ -2,6 +2,7 @@
 import { PARENTAL_RELATIONSHIPS, RELATIONSHIP_REQUIRED_GENDER } from '@/constants/enums'
 import { ageAt } from '@/features/renters/renterForm'
 import { addDays, addMonths, todayVN } from '@/lib/format'
+import { validFeeQuantity } from './feeRules'
 
 export const WIZARD_STEPS = [
   { id: 'template', label: 'Mẫu' },
@@ -233,8 +234,9 @@ export function validateStep(step, v, { template, room } = {}) {
     if (!inRange(v.copiesCount, 1, 10)) e.copiesCount = 'Từ 1 đến 10 bản.'
   }
   if (step === 'fees') {
+    // BE ContractFeeRules.IsValidQuantity: > 0, ≤ 100, tối đa 2 số lẻ (doc ghi 0–100 nhưng code chặn 0).
     for (const f of v.fees ?? []) {
-      if (f.quantity !== null && (f.quantity < 0 || f.quantity > 100)) e[`fee.${f.feeTypeId}.quantity`] = 'Từ 0 đến 100.'
+      if (f.quantity !== null && !validFeeQuantity(f.quantity)) e[`fee.${f.feeTypeId}.quantity`] = 'Lớn hơn 0, tối đa 100.'
     }
   }
   if (step === 'document') {

@@ -142,7 +142,7 @@ function TemplateEditor({ template, preset }) {
             <FormGrid>
               <TextField label="Tên mẫu" required maxLength={200} placeholder="VD Thuê trọ khu Quang Minh" {...form.field('name')} />
               <RadioGroup label="Loại hợp đồng" options={toOptions(CONTRACT_TYPE_LABELS)} value={v.contractType} onChange={changeType} />
-              <TextField label="Tiêu đề in trên hợp đồng" maxLength={200} className="span-full" {...form.field('title')} />
+              <TextField label="Tiêu đề in trên hợp đồng" required maxLength={200} className="span-full" {...form.field('title')} />
               <CheckboxField
                 className="span-full"
                 label="Hợp đồng không cọc"

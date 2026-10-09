@@ -19,6 +19,7 @@ import {
 import { CHARGE_BASIS_LABELS, FEE_GROUP_LABELS } from '@/constants/enums'
 import { usePropertyFees } from '@/features/shared/queries'
 import { formatBillingMonth, formatDate, formatMoney, todayVN } from '@/lib/format'
+import { formatFeePrice, validFeeQuantity } from '../feeRules'
 import { useBillingPeriods } from '../hooks'
 
 const PERIOD_CODE_FIELDS = {
@@ -80,6 +81,7 @@ function FeeDialog({ contract: c, fee, candidates, onClose, onDone }) {
       }}
       validate={(v) => ({
         feeTypeId: !v.feeTypeId ? 'Chọn khoản thu.' : null,
+        quantity: v.quantity !== null && !validFeeQuantity(v.quantity) ? 'Lớn hơn 0, tối đa 100.' : null,
         unitPriceOverride: v.customPrice && v.unitPriceOverride === null ? 'Nhập giá riêng.' : null,
         effectiveFrom: validateTiming(v),
       })}
@@ -183,7 +185,7 @@ export function FeesTab({ contract: c, actions, onDone }) {
       align: 'right',
       cell: (u) => (
         <span style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>
-          {unitPrice(u.unitPrice, u.unit) ?? <Badge tone="danger">Chưa có giá</Badge>}
+          {(u.tiers?.length ? formatFeePrice({ tiers: u.tiers }, u.unit) : unitPrice(u.unitPrice, u.unit)) ?? <Badge tone="danger">Chưa có giá</Badge>}
           {u.isOverride && <Badge>Giá riêng</Badge>}
         </span>
       ),
