@@ -14,7 +14,11 @@ export function RoomSpecFields({ form, prefix = 'spec.', showFloor = true, showD
   return (
     <FormGrid>
       {showFloor && <TextField label="Tầng" maxLength={10} hint="Dùng để nhóm sơ đồ phòng, VD 1, 2, Trệt" {...form.field(`${prefix}floor`)} />}
-      <NumberField label="Số người tối đa" required {...form.field(`${prefix}maxOccupants`, { type: 'value' })} />
+      <NumberField
+        label="Số người (loại phòng)"
+        hint="Chỉ để mô tả loại phòng — không giới hạn số người ở"
+        {...form.field(`${prefix}maxOccupants`, { type: 'value' })}
+      />
       <NumberField label="Diện tích" decimals={2} suffix="m²" {...form.field(`${prefix}areaM2`, { type: 'value' })} />
       <MoneyField label="Giá niêm yết / tháng" hint="Gợi ý khi tạo hợp đồng" {...form.field(`${prefix}listedRent`, { type: 'value' })} />
       <MoneyField label="Tiền cọc gợi ý" {...form.field(`${prefix}defaultDeposit`, { type: 'value' })} />

@@ -19,7 +19,7 @@ const parseCodes = (text) =>
 
 const INITIAL = {
   floors: [],
-  maxOccupants: 2,
+  maxOccupants: null,
   areaM2: null,
   listedRent: null,
   defaultDeposit: null,

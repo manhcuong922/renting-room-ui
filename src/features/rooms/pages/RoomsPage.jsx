@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import {
   Button,
+  CheckboxField,
   DataTable,
   EmptyState,
   PageHeader,
@@ -15,14 +16,16 @@ import {
   Toolbar,
 } from '@/components/ui'
 import { ROOM_STATUS } from '@/constants/enums'
+import { ContractFlagBadges } from '@/features/contracts/components/ContractBadges'
 import { usePropertyOptions } from '@/features/shared/queries'
 import { useListParams } from '@/hooks/useListParams'
 import { formatMoney } from '@/lib/format'
 import { RoomFormDialog } from '../components/RoomFormDialog'
-import { RoomGrid } from '../components/RoomGrid'
+import { RoomDebt, RoomGrid } from '../components/RoomGrid'
+import { formatOccupants } from '../roomForm'
 import { useRoomList } from '../hooks'
 
-const DEFAULTS = { search: '', propertyId: '', status: '', floor: '', view: 'grid', page: 1 }
+const DEFAULTS = { search: '', propertyId: '', status: '', floor: '', overdue: false, view: 'grid', page: 1 }
 const STATUS_OPTIONS = Object.entries(ROOM_STATUS).map(([value, s]) => ({ value, label: s.label }))
 const VIEW_OPTIONS = [
   {
@@ -60,8 +63,18 @@ const COLUMNS = [
   { key: 'area', header: 'Diện tích', cell: (r) => (r.areaM2 ? `${r.areaM2} m²` : '—') },
   { key: 'rent', header: 'Giá niêm yết', align: 'right', cell: (r) => formatMoney(r.listedRent) },
   { key: 'renter', header: 'Người đại diện', cell: (r) => r.currentContract?.representativeName ?? '—' },
-  { key: 'occupants', header: 'Số người', cell: (r) => `${r.currentContract?.occupantCount ?? 0}/${r.maxOccupants}` },
-  { key: 'status', header: 'Trạng thái', cell: (r) => <StatusBadge map={ROOM_STATUS} value={r.status} /> },
+  { key: 'occupants', header: 'Số người', cell: (r) => formatOccupants(r.currentContract?.occupantCount, r.maxOccupants) },
+  { key: 'debt', header: 'Công nợ', cell: (r) => <RoomDebt room={r} /> },
+  {
+    key: 'status',
+    header: 'Trạng thái',
+    cell: (r) => (
+      <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 4 }}>
+        <StatusBadge map={ROOM_STATUS} value={r.status} />
+        <ContractFlagBadges flags={r.currentContract?.flags} />
+      </span>
+    ),
+  },
 ]
 
 // docs/api/rooms.md#danh-sách — mặc định ẩn phòng ngừng dùng (lọc "Ngừng dùng" để xem).
@@ -74,6 +87,7 @@ export default function RoomsPage() {
     propertyId: params.propertyId || undefined,
     status: params.status || undefined,
     floor: params.floor || undefined,
+    overdue: params.overdue || undefined,
     search: params.search || undefined,
     page: params.page,
     pageSize: grid ? 100 : 30,
@@ -102,6 +116,7 @@ export default function RoomsPage() {
         />
         <SelectField aria-label="Trạng thái" placeholder="Mọi trạng thái (trừ ngừng dùng)" options={STATUS_OPTIONS} value={params.status} onChange={(e) => set({ status: e.target.value })} />
         <TextField aria-label="Tầng" placeholder="Tầng" value={params.floor} maxLength={10} onChange={(e) => set({ floor: e.target.value.trim() })} />
+        <CheckboxField label="Quá hạn thanh toán" checked={params.overdue} onChange={(e) => set({ overdue: e.target.checked })} />
         <RadioGroup options={VIEW_OPTIONS} value={params.view} onChange={(view) => set({ view })} />
       </Toolbar>
 

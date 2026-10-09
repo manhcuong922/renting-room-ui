@@ -9,6 +9,8 @@ export const roomsApi = {
   bulkCreate: (propertyId, body, { idempotencyKey }) =>
     http.post(`/properties/${propertyId}/rooms/bulk`, body, { idempotencyKey }),
   update: (id, body) => http.put(`/rooms/${id}`, body),
+  // Áp giá niêm yết mới cho HĐ đang hiệu lực của phòng — từ kỳ chưa lập phiếu đầu tiên.
+  applyListedRent: (id) => http.post(`/rooms/${id}/apply-listed-rent`),
   startMaintenance: (id, body) => http.post(`/rooms/${id}/maintenance/start`, body),
   endMaintenance: (id) => http.post(`/rooms/${id}/maintenance/end`),
   archive: (id) => http.post(`/rooms/${id}/archive`),

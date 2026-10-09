@@ -19,10 +19,13 @@ import {
 } from '@/components/ui'
 import { AMENITY_LABELS, CONTRACT_STATUS, ROOM_STATUS } from '@/constants/enums'
 import { useAction } from '@/hooks/useAction'
+import { ContractFlagBadges } from '@/features/contracts/components/ContractBadges'
 import { formatContractTerm } from '@/features/contracts/contractRules'
 import { formatMoney } from '@/lib/format'
 import { RoomFormDialog } from '../components/RoomFormDialog'
+import { RoomDebt } from '../components/RoomGrid'
 import { useRoom } from '../hooks'
+import { formatOccupants } from '../roomForm'
 
 const CONTRACT_COLUMNS = [
   { key: 'no', header: 'Số HĐ', primary: true, cell: (c) => <Link to={`/contracts/${c.id}`}>{c.contractNo}</Link> },
@@ -63,6 +66,7 @@ export default function RoomDetailPage() {
                 <>
                   <Badge tone="primary">{room.propertyCode}</Badge>
                   <StatusBadge map={ROOM_STATUS} value={room.status} />
+                  <RoomDebt room={room} />
                 </>
               }
               actions={
@@ -124,7 +128,10 @@ export default function RoomDetailPage() {
                     { label: 'Số hợp đồng', value: current.contractNo },
                     { label: 'Người đại diện', value: current.representativeName },
                     { label: 'Thời hạn', value: formatContractTerm(current) },
-                    { label: 'Số người đang ở', value: `${current.occupantCount}/${room.maxOccupants}` },
+                    { label: 'Số người đang ở', value: formatOccupants(current.occupantCount, room.maxOccupants) },
+                    { label: 'Cần xử lý', hidden: !current.flags?.length, value: <ContractFlagBadges flags={current.flags} /> },
+                    { label: 'Còn nợ', hidden: !room.outstandingAmount, value: formatMoney(room.outstandingAmount) },
+                    { label: 'Quá hạn thanh toán', hidden: !room.overdueAmount, value: formatMoney(room.overdueAmount) },
                   ]}
                 />
               </Section>
@@ -135,7 +142,7 @@ export default function RoomDetailPage() {
                 items={[
                   { label: 'Tầng', value: room.floor },
                   { label: 'Diện tích', value: room.areaM2 ? `${room.areaM2} m²` : null },
-                  { label: 'Số người tối đa', value: room.maxOccupants },
+                  { label: 'Số người (loại phòng)', value: room.maxOccupants ? `${room.maxOccupants} người` : null },
                   { label: 'Giá niêm yết', value: room.listedRent ? formatMoney(room.listedRent) : null },
                   { label: 'Tiền cọc gợi ý', value: room.defaultDeposit ? formatMoney(room.defaultDeposit) : null },
                   {

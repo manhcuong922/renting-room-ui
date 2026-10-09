@@ -135,3 +135,49 @@
   flex-shrink: 0;
   color: var(--color-text-muted);
 }
+
+.debt {
+  align-self: flex-start;
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.overdue {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+.flag {
+  padding: 0 6px;
+  border-radius: var(--radius-full);
+  background: var(--color-neutral-soft);
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.flag_warning {
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+
+.flag_danger {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.flag_orange {
+  background: var(--color-orange-soft);
+  color: var(--color-orange);
+}
