@@ -39,12 +39,13 @@ src/
 |----------|----------|
 | `auth` | Đăng nhập, đổi mật khẩu bắt buộc, hồ sơ, đăng xuất / đăng xuất mọi thiết bị |
 | `admin` (SystemAdmin) | Danh sách tổ chức · tạo tổ chức (mật khẩu tạm 1 lần) · chi tiết: tạm ngưng / kích hoạt lại, cấp lại mật khẩu, khóa / mở khóa |
-| `org/members` | Danh sách thành viên · thêm / sửa / khóa / mở khóa / gỡ (gõ tên xác nhận) / cấp lại mật khẩu — phó quản lý chỉ xem |
-| `properties` | Danh sách (thẻ, tỉ lệ lấp đầy) · tạo khu · chi tiết 6 tab: Phòng (sơ đồ), Thông tin & cài đặt thu, Bên cho thuê (xem số giấy tờ 👁), Ngân hàng, Nội quy, Nhóm phòng · ngừng dùng / khôi phục |
-| `rooms` | Sơ đồ theo tầng / bảng, lọc khu-trạng thái-tầng · thêm phòng · tạo hàng loạt (sinh mã `{tầng}{01..n}`) · chi tiết: bảo trì, ngừng dùng, khôi phục, lịch sử hợp đồng, "Tạo hợp đồng" |
-| `renters` | Tìm theo tên không dấu / SĐT / đủ số giấy tờ · thêm / sửa (trùng số giấy tờ → đề xuất dùng hồ sơ cũ) · chi tiết + lịch sử thuê |
+| `org/members` | Danh sách thành viên · thêm / sửa / khóa / mở khóa / gỡ (gõ tên xác nhận) / cấp lại mật khẩu · bật / tắt quyền xem số giấy tờ của phó quản lý — phó quản lý chỉ xem |
+| `org/lessor`, `org/data-retention` | Cài đặt tổ chức: Thông tin chủ trọ (bên cho thuê mặc định cho mọi khu) · thời gian giữ dữ liệu người thuê, ẩn danh tự động |
+| `properties` | Danh sách (thẻ, tỉ lệ lấp đầy) · tạo khu (kèm cài đặt kỳ thu) · chi tiết 7 tab: Phòng (sơ đồ), Thông tin chung, Kỳ thu (đổi ngày chốt có xem trước kỳ chuyển tiếp), Bên cho thuê (dùng thông tin chủ trọ / khai riêng), Ngân hàng, Nội quy, Nhóm phòng · ngừng dùng / khôi phục |
+| `rooms` | Sơ đồ theo tầng / bảng, lọc khu-trạng thái-tầng-quá hạn · nhãn Còn nợ / Quá hạn / cờ hợp đồng · thêm phòng · tạo hàng loạt · sửa giá niêm yết → hỏi áp cho người đang thuê · chi tiết: bảo trì, ngừng dùng, khôi phục, lịch sử hợp đồng |
+| `renters` | Tìm theo tên không dấu / SĐT / đủ số giấy tờ (POST /renters/search, không đặt số lên URL) · thêm / sửa (trẻ < 14 tuổi chưa có giấy tờ; trùng số giấy tờ → mở hồ sơ cũ) · ẩn danh (chủ trọ, xác nhận 2 bước) · chi tiết + lịch sử thuê |
 | `contract-templates` | Danh sách theo loại · tạo từ mẫu gợi ý · trình soạn điều khoản + trường tùy biến (7 kiểu, tự sinh key) · ngừng dùng / khôi phục |
-| `contracts` | Danh sách (tab trạng thái, sắp hết hạn, quá hạn, không cọc) · wizard 6 bước tạo / sửa nháp · chi tiết 9 tab + mọi thao tác theo ma trận trạng thái: kích hoạt (checklist, xác nhận vượt sức chứa), hủy nháp, người ở, phụ lục giá, gia hạn, báo trả phòng, thanh lý, tài sản, xe, ghi chú |
+| `contracts` | Danh sách (tab trạng thái, sắp hết hạn, quá hạn, không cọc, thiếu tài liệu, cờ cần xử lý) · wizard 7 bước (có "Tính tiền từ ngày", bước Khoản thu) · chi tiết 10 tab: kích hoạt kèm chỉ số nhận phòng, ký lại cho người còn ở, cho ở tiếp, sửa giá thuê, khoản thu theo kỳ, bản ký, tải .docx, báo trả phòng, thanh lý → phiếu quyết toán (chỉ số cuối) → hoàn tất (thu đủ / bỏ nợ) · trang Dữ liệu cần xem lại |
 | `exports` | Hộp thoại xuất Excel người thuê (khu / tầng / nhóm / phòng, đang ở hoặc khoảng ngày, chia sheet, số giấy tờ đầy đủ) |
 
 ## Layout
