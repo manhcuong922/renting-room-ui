@@ -24,7 +24,7 @@ export default function ContractTemplatesPage() {
     <>
       <PageHeader
         title="Mẫu hợp đồng"
-        description="Tiêu đề, điều khoản và trường tùy biến theo loại hợp đồng. Sửa mẫu không đổi hợp đồng đã kích hoạt."
+        description="Tiêu đề, điều khoản và trường tùy biến theo loại hợp đồng. Sửa mẫu không đổi hợp đồng đã kích hoạt; bản nháp nhận nội dung mới ở lần sửa nháp kế tiếp. Điện, nước, dịch vụ khai bằng khoản thu của khu."
         actions={
           <Button icon={Plus} onClick={() => setChoosing(true)}>
             Tạo mẫu

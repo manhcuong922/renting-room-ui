@@ -183,7 +183,10 @@ function TemplateEditor({ template, preset }) {
           <div className={styles.blockHeader}>
             <div>
               <h2 className={styles.blockTitle}>Trường tùy biến ({v.fields.length}/{MAX_FIELDS})</h2>
-              <p className={styles.blockHint}>Ô nhập thêm khi lập hợp đồng (VD cách tính điện, tiền nước). Chỉ ghi nhận thỏa thuận, không tự tính tiền.</p>
+              <p className={styles.blockHint}>
+                Ô nhập thêm khi lập hợp đồng cho thỏa thuận khác (khách qua đêm, giờ đóng cổng, mục đích sử dụng nhà…). Điện, nước, dịch vụ{' '}
+                <strong>không</strong> khai ở đây — khai bằng khoản thu của khu để vừa tính tiền vừa in vào văn bản.
+              </p>
             </div>
             <Button variant="secondary" icon={Plus} disabled={v.fields.length >= MAX_FIELDS} onClick={() => form.setValue('fields', [...v.fields, emptyField()])}>
               Thêm trường
@@ -217,7 +220,7 @@ function TemplateEditor({ template, preset }) {
                       error={form.errors[`fields.${i}.optionsText`] ?? form.errors[`fields.${i}.options`]}
                     />
                   )}
-                  <TextField label="Đơn vị" maxLength={20} placeholder="đ/kWh, m²…" {...form.field(`fields.${i}.unit`)} />
+                  <TextField label="Đơn vị" maxLength={20} placeholder="m², giờ, ngày…" {...form.field(`fields.${i}.unit`)} />
                   <TextField label="Gợi ý" maxLength={200} {...form.field(`fields.${i}.hint`)} />
                   <CheckboxField label="Bắt buộc nhập" {...form.field(`fields.${i}.required`, { type: 'checkbox' })} />
                 </FormGrid>
