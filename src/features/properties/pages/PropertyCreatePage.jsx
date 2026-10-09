@@ -7,7 +7,8 @@ import { useIdempotencyKey } from '@/hooks/useIdempotencyKey'
 import { PropertyFormFields } from '../components/PropertyFormFields'
 import { toPropertyBody, toPropertyForm, validateProperty } from '../propertyForm'
 
-// Bước 1 của "khu mới" (docs/api/properties.md#wizard-khu-mới-gợi-ý) → sang tab Bên cho thuê.
+// Bước 1 của "khu mới" (docs/api/properties.md#wizard-khu-mới-gợi-ý). Bên cho thuê mặc định = thông tin chủ trọ
+// (khai 1 lần ở Cài đặt tổ chức) → sau khi tạo sang tab Bên cho thuê để xác nhận / khai riêng nếu khác.
 export default function PropertyCreatePage() {
   const navigate = useNavigate()
   const toast = useToast()
@@ -19,16 +20,16 @@ export default function PropertyCreatePage() {
   })
 
   const submit = form.handleSubmit(async (v) => {
-    const body = { code: v.code.trim().toUpperCase(), ...toPropertyBody(v) }
+    const body = { code: v.code.trim().toUpperCase(), ...toPropertyBody(v), billing: v.billing }
     const { id } = await propertiesApi.create(body, { idempotencyKey: idem.keyFor(body) })
     await invalidate(queryKeys.properties.all)
-    toast.success('Đã tạo khu. Tiếp theo: khai báo bên cho thuê để ký được hợp đồng.')
+    toast.success('Đã tạo khu. Kiểm tra bên cho thuê, rồi tạo phòng.')
     void navigate(`/properties/${id}?tab=lessor`, { replace: true })
   })
 
   return (
     <>
-      <PageHeader backTo="/properties" backLabel="Khu trọ" title="Tạo khu trọ" description="Sau khi tạo: khai báo bên cho thuê → ngân hàng → tạo phòng." />
+      <PageHeader backTo="/properties" backLabel="Khu trọ" title="Tạo khu trọ" description="Sau khi tạo: kiểm tra bên cho thuê → ngân hàng → tạo phòng." />
       <Card>
         <form onSubmit={submit} noValidate>
           <PropertyFormFields form={form} creating />

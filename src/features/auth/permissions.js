@@ -32,6 +32,8 @@ export const Permission = Object.freeze({
   ContractTemplatesManage: 'contract-templates.manage',
   MembersView: 'members.view',
   MembersManage: 'members.manage', // thêm/sửa/khóa/gỡ/cấp lại mật khẩu phó quản lý — chỉ chủ trọ
+  OrganizationSettingsView: 'organization-settings.view', // thông tin chủ trọ, thời gian giữ dữ liệu — phó quản lý chỉ xem
+  OrganizationSettingsManage: 'organization-settings.manage',
   OrganizationsManage: 'organizations.manage',
 })
 
@@ -50,6 +52,8 @@ const PERMISSION_POLICY = {
   [Permission.ContractTemplatesManage]: Policy.OrgMember,
   [Permission.MembersView]: Policy.OrgMember,
   [Permission.MembersManage]: Policy.OrgOwner,
+  [Permission.OrganizationSettingsView]: Policy.OrgMember,
+  [Permission.OrganizationSettingsManage]: Policy.OrgOwner,
   [Permission.OrganizationsManage]: Policy.SystemAdmin,
 }
 

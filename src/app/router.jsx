@@ -16,6 +16,7 @@ import {
   LoginPage,
   MembersPage,
   OrganizationDetailPage,
+  OrganizationSettingsPage,
   OrganizationsPage,
   ProfilePage,
   PropertiesPage,
@@ -101,6 +102,11 @@ export const router = createBrowserRouter([
                     handle: { title: 'Sửa mẫu hợp đồng', permission: Permission.ContractTemplatesManage },
                   },
                   { path: 'members', element: <MembersPage />, handle: { title: 'Thành viên', permission: Permission.MembersView } },
+                  {
+                    path: 'organization',
+                    element: <OrganizationSettingsPage />,
+                    handle: { title: 'Cài đặt tổ chức', permission: Permission.OrganizationSettingsView },
+                  },
                   {
                     path: 'admin/organizations',
                     element: <OrganizationsPage />,

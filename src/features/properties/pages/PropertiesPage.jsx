@@ -117,9 +117,10 @@ function PropertyCard({ property }) {
         </div>
       </div>
 
+      {/* Xét bên cho thuê hiệu lực (riêng của khu hoặc thông tin chủ trọ) — chỉ cảnh báo, không chặn kích hoạt / thu tiền. */}
       {!lessorComplete && !isArchived && (
         <Link to={`/properties/${id}?tab=lessor`} className={styles.warning}>
-          <TriangleAlert size={14} aria-hidden /> Chưa khai báo đủ bên cho thuê — chưa ký được hợp đồng
+          <TriangleAlert size={14} aria-hidden /> Chưa đủ thông tin bên cho thuê — chưa in được hợp đồng đầy đủ
         </Link>
       )}
     </Card>

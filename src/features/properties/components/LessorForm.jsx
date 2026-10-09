@@ -1,16 +1,14 @@
-import { CircleCheck, TriangleAlert } from 'lucide-react'
-import { propertiesApi, queryKeys } from '@/api'
-import { Alert, Button, DateField, FormGrid, FormSection, RadioGroup, SecretValue, SelectField, TextField, useToast } from '@/components/ui'
+import { Alert, Button, DateField, DescriptionList, FormGrid, FormSection, RadioGroup, SecretValue, SelectField, TextField } from '@/components/ui'
 import { ID_DOCUMENT_TYPE_LABELS, ID_NUMBER_HINTS, LESSOR_TYPE_LABELS, toOptions } from '@/constants/enums'
-import { useInvalidate } from '@/hooks/useAction'
 import { blankToNull, useForm } from '@/hooks/useForm'
+import { formatDate } from '@/lib/format'
 
-function toForm(l) {
+function toForm(l, prefill) {
   return {
     type: l?.type ?? 'Individual',
-    name: l?.name ?? '',
-    address: l?.address ?? '',
-    phone: l?.phone ?? '',
+    name: l?.name ?? prefill?.name ?? '',
+    address: l?.address ?? prefill?.address ?? '',
+    phone: l?.phone ?? prefill?.phone ?? '',
     email: l?.email ?? '',
     idType: l?.idType ?? 'CitizenId',
     idNumber: '',
@@ -44,38 +42,38 @@ function makeValidate(existing) {
   }
 }
 
-export function LessorTab({ property }) {
-  const lessor = property.lessor
-  const toast = useToast()
-  const invalidate = useInvalidate()
-  const form = useForm(toForm(lessor), { validate: makeValidate(lessor), codeFields: { ID_NUMBER_REQUIRED: 'idNumber', LESSOR_UNDERAGE: 'dateOfBirth' } })
+/** Body PUT bên cho thuê: chuỗi rỗng → null; idNumber null = giữ số cũ; tổ chức không gửi nhóm giấy tờ cá nhân. */
+function toBody(v) {
+  const body = Object.fromEntries(Object.entries(v).map(([k, val]) => [k, blankToNull(val)]))
+  if (v.type !== 'Individual') Object.assign(body, { idType: null, idNumber: null, idIssueDate: null, idIssuePlace: null, dateOfBirth: null })
+  return body
+}
+
+/**
+ * Form bên cho thuê — dùng cho Thông tin chủ trọ (PUT /org/lessor) và bên cho thuê riêng của khu (PUT /properties/{id}/lessor).
+ * `prefill` (chỉ lần đầu): gợi ý tên / SĐT / địa chỉ từ thông tin liên hệ của tổ chức.
+ * `onReveal` không truyền (không có quyền dữ liệu nhạy cảm) → chỉ hiện số đã che.
+ */
+export function LessorForm({ lessor, prefill, onSave, onReveal, submitLabel = 'Lưu bên cho thuê', extraActions }) {
+  const form = useForm(toForm(lessor, prefill), {
+    validate: makeValidate(lessor),
+    codeFields: { ID_NUMBER_REQUIRED: 'idNumber', LESSOR_UNDERAGE: 'dateOfBirth' },
+  })
   const individual = form.values.type === 'Individual'
   const keepsOldNumber = lessor?.idNumberMasked && lessor.idType === form.values.idType
 
   const submit = form.handleSubmit(async (v) => {
-    const body = Object.fromEntries(Object.entries(v).map(([k, val]) => [k, blankToNull(val)]))
-    // null = giữ số giấy tờ cũ (server). Tổ chức không gửi nhóm giấy tờ cá nhân.
-    if (!individual) Object.assign(body, { idType: null, idNumber: null, idIssueDate: null, idIssuePlace: null, dateOfBirth: null })
-    await propertiesApi.updateLessor(property.id, body)
-    await invalidate(queryKeys.properties.detail(property.id), queryKeys.properties.all)
+    await onSave(toBody(v))
     form.setValue('idNumber', '')
-    toast.success('Đã lưu bên cho thuê.')
   })
 
   return (
     <form onSubmit={submit} noValidate>
-      <div style={{ display: 'grid', gap: 'var(--space-3)', marginBottom: 'var(--space-5)' }}>
-        {lessor?.isComplete ? (
-          <Alert tone="info">
-            <CircleCheck size={14} aria-hidden style={{ display: 'inline', verticalAlign: '-2px' }} /> Đã khai báo đủ — ký được hợp đồng.
-          </Alert>
-        ) : (
-          <Alert tone="warning">
-            <TriangleAlert size={14} aria-hidden style={{ display: 'inline', verticalAlign: '-2px' }} /> Chưa khai báo đủ bên cho thuê — chưa kích hoạt được hợp đồng.
-          </Alert>
-        )}
-        {form.formError && <Alert>{form.formError}</Alert>}
-      </div>
+      {form.formError && (
+        <div style={{ marginBottom: 'var(--space-4)' }}>
+          <Alert>{form.formError}</Alert>
+        </div>
+      )}
 
       <FormSection title="Bên cho thuê" description="Người/tổ chức đứng tên bên A trên hợp đồng.">
         <FormGrid>
@@ -107,8 +105,7 @@ export function LessorTab({ property }) {
             />
             {lessor?.idNumberMasked && (
               <div className="span-full" style={{ fontSize: 'var(--text-sm)' }}>
-                Số hiện tại:{' '}
-                <SecretValue masked={lessor.idNumberMasked} onReveal={() => propertiesApi.revealLessorIdNumber(property.id)} />
+                Số hiện tại: <SecretValue masked={lessor.idNumberMasked} onReveal={onReveal} />
               </div>
             )}
             <DateField label="Ngày cấp" {...form.field('idIssueDate')} />
@@ -132,11 +129,41 @@ export function LessorTab({ property }) {
         </FormGrid>
       </FormSection>
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'var(--space-6)' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 'var(--space-2)', marginTop: 'var(--space-6)' }}>
+        {extraActions}
         <Button type="submit" loading={form.submitting}>
-          Lưu bên cho thuê
+          {submitLabel}
         </Button>
       </div>
     </form>
+  )
+}
+
+/** Xem bên cho thuê (chỉ đọc) — khu đang dùng thông tin chủ trọ, hoặc phó quản lý xem thông tin chủ trọ. */
+export function LessorSummary({ lessor, onReveal }) {
+  const individual = lessor.type === 'Individual'
+  return (
+    <DescriptionList
+      items={[
+        { label: 'Loại', value: LESSOR_TYPE_LABELS[lessor.type] },
+        { label: individual ? 'Họ tên' : 'Tên tổ chức', value: lessor.name },
+        { label: 'Số điện thoại', value: lessor.phone },
+        { label: 'Email', value: lessor.email },
+        { label: 'Địa chỉ', value: lessor.address, full: true },
+        {
+          label: 'Giấy tờ',
+          hidden: !individual,
+          value: lessor.idNumberMasked && (
+            <>
+              {ID_DOCUMENT_TYPE_LABELS[lessor.idType]} <SecretValue masked={lessor.idNumberMasked} onReveal={onReveal} />
+            </>
+          ),
+        },
+        { label: 'Ngày sinh', hidden: !individual, value: formatDate(lessor.dateOfBirth) },
+        { label: 'Mã số thuế', hidden: individual, value: lessor.taxCode },
+        { label: 'Người đại diện', hidden: individual, value: [lessor.representativeName, lessor.representativeTitle].filter(Boolean).join(' — ') },
+        { label: 'Giấy ủy quyền', hidden: !lessor.authorizationDocNo, value: `${lessor.authorizationDocNo} (${formatDate(lessor.authorizationDocDate)})` },
+      ]}
+    />
   )
 }

@@ -1,7 +1,10 @@
-import { Alert, FormGrid, FormSection, NumberField, SelectField, TextAreaField, TextField } from '@/components/ui'
-import { CHARGE_MODE_LABELS, PRORATION_MODE_LABELS, toOptions } from '@/constants/enums'
+import { Alert, FormGrid, FormSection, TextAreaField, TextField } from '@/components/ui'
+import { BillingFields } from './BillingFields'
 
-/** Form thông tin khu + cài đặt thu (dùng cho tạo mới và tab Thông tin). `form` = useForm(). */
+/**
+ * Form thông tin khu (tạo mới và tab Thông tin). `form` = useForm().
+ * Cài đặt kỳ thu chỉ nhập khi tạo khu — sau đó đổi ở tab Kỳ thu (có xem trước kỳ chuyển tiếp).
+ */
 export function PropertyFormFields({ form, creating }) {
   return (
     <>
@@ -30,18 +33,14 @@ export function PropertyFormFields({ form, creating }) {
           <TextField label="Số giấy chứng nhận" {...form.field('land.ownershipCertificateNo')} />
         </FormGrid>
       </FormSection>
-      <FormSection
-        title="Cài đặt thu mặc định"
-        description="Là giá trị gợi ý khi tạo hợp đồng mới. Đổi cài đặt chỉ áp dụng cho hợp đồng tạo sau — hợp đồng cũ giữ cài đặt riêng."
-      >
-        <FormGrid cols={3}>
-          <NumberField label="Ngày chốt kỳ thu" required hint="31 = cuối tháng với tháng ngắn" {...form.field('billingDefaults.anchorDay', { type: 'value' })} />
-          <SelectField label="Thu tiền phòng" options={toOptions(CHARGE_MODE_LABELS)} {...form.field('billingDefaults.chargeMode')} />
-          <NumberField label="Hạn đóng sau ngày chốt" suffix="ngày" {...form.field('billingDefaults.paymentDueDays', { type: 'value' })} />
-          <SelectField label="Tháng lẻ" options={toOptions(PRORATION_MODE_LABELS)} {...form.field('billingDefaults.prorationMode')} />
-          <NumberField label="Báo trước khi trả phòng" suffix="ngày" {...form.field('billingDefaults.noticeDays', { type: 'value' })} />
-        </FormGrid>
-      </FormSection>
+      {creating && (
+        <FormSection
+          title="Cài đặt kỳ thu"
+          description="Mọi phòng / hợp đồng của khu dùng chung (hợp đồng không chọn riêng). Đổi sau ở tab Kỳ thu của khu."
+        >
+          <BillingFields form={form} prefix="billing." />
+        </FormSection>
+      )}
     </>
   )
 }

@@ -6,7 +6,8 @@ import { Alert, Badge, Button, Card, ConfirmDialog, PageHeader, QueryView, TabPa
 import { ExportRentersDialog } from '@/features/exports/ExportRentersDialog'
 import { useAction } from '@/hooks/useAction'
 import { useTabParam } from '@/hooks/useTabParam'
-import { LessorTab } from '../components/LessorTab'
+import { BillingTab } from '../components/BillingTab'
+import { PropertyLessorTab } from '../components/PropertyLessorTab'
 import { PropertyRoomsTab } from '../components/PropertyRoomsTab'
 import { RoomGroupsTab } from '../components/RoomGroupsTab'
 import { BankTab, HouseRulesTab, PropertyInfoTab } from '../components/SimpleTabs'
@@ -14,7 +15,7 @@ import { useProperty } from '../hooks'
 
 const TAB_PREFIX = 'property'
 
-// docs/api/properties.md#chi-tiết — tab: Thông tin · Bên cho thuê · Ngân hàng · Nội quy · Phòng · Nhóm phòng.
+// docs/api/properties.md#chi-tiết — tab: Phòng · Thông tin · Kỳ thu · Bên cho thuê · Ngân hàng · Nội quy · Nhóm phòng.
 export default function PropertyDetailPage() {
   const { id } = useParams()
   const query = useProperty(id)
@@ -30,7 +31,8 @@ export default function PropertyDetailPage() {
       {(property) => {
         const tabs = [
           { id: 'rooms', label: 'Phòng' },
-          { id: 'info', label: 'Thông tin & cài đặt thu' },
+          { id: 'info', label: 'Thông tin chung' },
+          { id: 'billing', label: 'Kỳ thu' },
           { id: 'lessor', label: 'Bên cho thuê', badge: property.lessor?.isComplete ? '✓' : '!' },
           { id: 'bank', label: 'Ngân hàng' },
           { id: 'rules', label: 'Nội quy' },
@@ -81,10 +83,11 @@ export default function PropertyDetailPage() {
             <TabPanel idPrefix={TAB_PREFIX} id={tab}>
               {tab === 'rooms' && <PropertyRoomsTab property={property} />}
               {tab === 'groups' && <RoomGroupsTab property={property} />}
-              {tab !== 'rooms' && tab !== 'groups' && (
+              {tab === 'billing' && <BillingTab key={property.version} property={property} />}
+              {!['rooms', 'groups', 'billing'].includes(tab) && (
                 <Card>
                   {tab === 'info' && <PropertyInfoTab key={property.version} property={property} />}
-                  {tab === 'lessor' && <LessorTab key={property.version} property={property} />}
+                  {tab === 'lessor' && <PropertyLessorTab key={property.version} property={property} />}
                   {tab === 'bank' && <BankTab key={property.version} property={property} />}
                   {tab === 'rules' && <HouseRulesTab key={property.version} property={property} />}
                 </Card>

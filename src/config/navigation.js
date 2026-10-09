@@ -1,4 +1,4 @@
-import { Building, DoorOpen, FileStack, FileText, LayoutDashboard, ShieldCheck, UserCog, Users } from 'lucide-react'
+import { Building, DoorOpen, FileStack, FileText, LayoutDashboard, Settings, ShieldCheck, UserCog, Users } from 'lucide-react'
 import { Role } from '@/constants/enums'
 import { hasPermission, Permission } from '@/features/auth/permissions'
 
@@ -31,7 +31,10 @@ export const NAVIGATION = [
   {
     id: 'organization',
     label: 'Tổ chức',
-    items: [{ to: '/members', label: 'Thành viên', icon: UserCog, permission: Permission.MembersView }],
+    items: [
+      { to: '/members', label: 'Thành viên', icon: UserCog, permission: Permission.MembersView },
+      { to: '/organization', label: 'Cài đặt tổ chức', icon: Settings, permission: Permission.OrganizationSettingsView },
+    ],
   },
   {
     id: 'admin',

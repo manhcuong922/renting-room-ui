@@ -10,7 +10,7 @@ function SaveBar({ children }) {
   return <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 'var(--space-2)', marginTop: 'var(--space-6)' }}>{children}</div>
 }
 
-/** Tab Thông tin & cài đặt thu — PUT /properties/{id} (kèm version chống ghi đè). */
+/** Tab Thông tin chung — PUT /properties/{id} (kèm version chống ghi đè; không gồm cài đặt kỳ thu). */
 export function PropertyInfoTab({ property }) {
   const toast = useToast()
   const invalidate = useInvalidate()

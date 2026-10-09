@@ -97,7 +97,7 @@ function Wizard({ initial, contract, presetRoomId }) {
     form.setValue('monthlyRent', r.listedRent ?? null)
     if (!template?.noDeposit) form.setValue('depositAmount', r.defaultDeposit ?? null)
     const p = await queryClient.fetchQuery({ queryKey: queryKeys.properties.detail(r.propertyId), queryFn: () => propertiesApi.get(r.propertyId) })
-    const { anchorDay, chargeMode, prorationMode, paymentDueDays, noticeDays } = p.billingDefaults
+    const { anchorDay, chargeMode, prorationMode, paymentDueDays, noticeDays } = p.billing
     form.setValue('billing', { anchorDay, chargeMode, prorationMode, paymentDueDays })
     form.setValue('noticeDays', noticeDays)
   }
