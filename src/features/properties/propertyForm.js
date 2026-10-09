@@ -1,6 +1,6 @@
 // Chuyển đổi dữ liệu khu ⇄ form + kiểm tra phía client (docs/api/properties.md#tạo-khu).
 // Cài đặt kỳ thu (`billing`) của khu — mọi HĐ của khu dùng chung. Chỉ gửi khi TẠO khu; sau đó đổi qua PUT /properties/{id}/billing.
-export const DEFAULT_BILLING = { anchorDay: 1, chargeMode: 'Postpaid', paymentDueDays: 5, prorationMode: 'Daily', noticeDays: 30 }
+export const DEFAULT_BILLING = { anchorDay: 1, chargeMode: 'Postpaid', paymentDueDays: 5, prorationMode: 'Daily', noticeDays: 30, roundInvoiceTotal: true }
 export const ANCHOR_DAY_MAX = 28
 
 export function toPropertyForm(p) {

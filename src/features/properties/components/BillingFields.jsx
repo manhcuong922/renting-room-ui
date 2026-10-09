@@ -1,4 +1,4 @@
-import { FormGrid, NumberField, SelectField } from '@/components/ui'
+import { CheckboxField, FormGrid, NumberField, SelectField } from '@/components/ui'
 import { CHARGE_MODE_LABELS, PRORATION_MODE_LABELS, toOptions } from '@/constants/enums'
 import { ANCHOR_DAY_MAX } from '../propertyForm'
 
@@ -24,6 +24,12 @@ export function BillingFields({ form, prefix = '', disabled }) {
         suffix="ngày"
         hint="Gợi ý khi tạo hợp đồng — hợp đồng giữ số ngày riêng"
         {...field('noticeDays', { type: 'value' })}
+      />
+      <CheckboxField
+        className="span-full"
+        label="Làm tròn tổng phiếu xuống nghìn"
+        description="Bỏ phần lẻ dưới 1.000đ của tổng phiếu (VD 2.378.500đ → 2.378.000đ)."
+        {...field('roundInvoiceTotal', { type: 'checkbox' })}
       />
     </FormGrid>
   )

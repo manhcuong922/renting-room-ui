@@ -18,6 +18,8 @@ import {
 import { PAYMENT_METHOD_LABELS, TERMINATION_GROUND_LABELS, TERMINATION_REASON_LABELS, toOptions } from '@/constants/enums'
 import { useRoomMeters } from '@/features/shared/queries'
 import { useIdempotencyKey } from '@/hooks/useIdempotencyKey'
+import { usePermission } from '@/features/auth/AuthContext'
+import { Permission } from '@/features/auth/permissions'
 import { getErrorMessage } from '@/lib/http/ApiError'
 import { addDays, formatDate, formatMoney, todayVN } from '@/lib/format'
 import { MeterReadingsFields } from './MeterReadingsFields'
@@ -243,6 +245,7 @@ export function CompleteLiquidationDialog({ contract: c, onClose, onDone }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
   const [reasonError, setReasonError] = useState(null)
+  const canWriteOff = usePermission(Permission.DebtWriteOff)
 
   const complete = async (body) => {
     setBusy(true)
@@ -303,14 +306,18 @@ export function CompleteLiquidationDialog({ contract: c, onClose, onDone }) {
         ) : (
           <>
             <Alert tone="warning">Hợp đồng còn nợ {debt != null ? formatMoney(debt) : ''} trên các phiếu đã chốt.</Alert>
-            <RadioGroup
-              options={[
-                { value: 'CollectAll', label: 'Đã thu toàn bộ' },
-                { value: 'WriteOff', label: 'Bỏ nợ' },
-              ]}
-              value={settlement.mode}
-              onChange={(mode) => set({ mode })}
-            />
+            {canWriteOff ? (
+              <RadioGroup
+                options={[
+                  { value: 'CollectAll', label: 'Đã thu toàn bộ' },
+                  { value: 'WriteOff', label: 'Bỏ nợ' },
+                ]}
+                value={settlement.mode}
+                onChange={(mode) => set({ mode })}
+              />
+            ) : (
+              <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>Bỏ nợ chỉ chủ trọ thực hiện được.</p>
+            )}
             {settlement.mode === 'CollectAll' ? (
               <FormGrid>
                 <SelectField label="Hình thức" options={toOptions(PAYMENT_METHOD_LABELS)} value={settlement.method} onChange={(e) => set({ method: e.target.value })} />

@@ -132,6 +132,7 @@ export default function RoomDetailPage() {
                     { label: 'Cần xử lý', hidden: !current.flags?.length, value: <ContractFlagBadges flags={current.flags} /> },
                     { label: 'Còn nợ', hidden: !room.outstandingAmount, value: formatMoney(room.outstandingAmount) },
                     { label: 'Quá hạn thanh toán', hidden: !room.overdueAmount, value: formatMoney(room.overdueAmount) },
+                    { label: 'Đang giữ cọc', hidden: !room.depositHeld, value: formatMoney(room.depositHeld) },
                   ]}
                 />
               </Section>

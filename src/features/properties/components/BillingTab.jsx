@@ -42,9 +42,10 @@ const CHANGE_COLUMNS = [
   { key: 'adjust', header: 'Tiền phòng kỳ đó', align: 'right', cell: (c) => `1 tháng ${signedDays(c.adjustDays)}` },
 ]
 
+// roundInvoiceTotal: BE trả mặc định true; PUT gửi null sẽ BẬT lại ⇒ luôn gửi giá trị hiện tại.
 function currentForm(billing) {
   const { anchorDay, chargeMode, paymentDueDays, prorationMode, noticeDays } = billing
-  return { anchorDay, chargeMode, paymentDueDays, prorationMode, noticeDays, adjustDays: null }
+  return { anchorDay, chargeMode, paymentDueDays, prorationMode, noticeDays, roundInvoiceTotal: billing.roundInvoiceTotal ?? true, adjustDays: null }
 }
 
 /** Số ngày điều chỉnh có dấu: kỳ ngắn hơn (deviation < 0) thì ô nhập là số ngày TRỪ. */
@@ -134,7 +135,10 @@ export function BillingTab({ property }) {
   })
   const v = form.values
   const scheduleChanged = v.anchorDay !== billing.anchorDay || v.chargeMode !== billing.chargeMode
-  const changed = scheduleChanged || ['paymentDueDays', 'prorationMode', 'noticeDays'].some((k) => v[k] !== billing[k])
+  const changed =
+    scheduleChanged ||
+    ['paymentDueDays', 'prorationMode', 'noticeDays'].some((k) => v[k] !== billing[k]) ||
+    v.roundInvoiceTotal !== (billing.roundInvoiceTotal ?? true)
 
   const previewArgs = useDebouncedValue({ anchorDay: v.anchorDay, chargeMode: v.chargeMode }, 400)
   const preview = useQuery({
@@ -151,13 +155,14 @@ export function BillingTab({ property }) {
       form.setErrors({ adjustDays: `Từ 0 đến ${Math.abs(adjust.deviation)} ngày.` })
       return
     }
-    const { anchorDay, chargeMode, paymentDueDays, prorationMode, noticeDays } = values
+    const { anchorDay, chargeMode, paymentDueDays, prorationMode, noticeDays, roundInvoiceTotal } = values
     await propertiesApi.updateBilling(property.id, {
       anchorDay,
       chargeMode,
       paymentDueDays,
       prorationMode,
       noticeDays,
+      roundInvoiceTotal,
       transitionAdjustDays: hasTransition ? adjust.signed : null,
     })
     await invalidate(queryKeys.properties.detail(property.id), queryKeys.contracts.all)
@@ -176,6 +181,7 @@ export function BillingTab({ property }) {
             { label: 'Hạn đóng sau ngày chốt', value: `${billing.paymentDueDays} ngày` },
             { label: 'Kỳ lẻ', value: PRORATION_MODE_LABELS[billing.prorationMode] },
             { label: 'Báo trước khi trả phòng (gợi ý)', value: `${billing.noticeDays} ngày` },
+            { label: 'Làm tròn tổng phiếu', value: (billing.roundInvoiceTotal ?? true) ? 'Xuống nghìn' : 'Không' },
           ]}
         />
       </Section>

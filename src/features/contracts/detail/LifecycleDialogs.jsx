@@ -24,7 +24,7 @@ import { CONTRACT_WARNING_LABELS } from '@/constants/enums'
 import { useRoomMeters } from '@/features/shared/queries'
 import { useIdempotencyKey } from '@/hooks/useIdempotencyKey'
 import { getErrorMessage } from '@/lib/http/ApiError'
-import { addDays, formatBillingMonth, formatDate, todayVN } from '@/lib/format'
+import { addDays, formatBillingMonth, formatDate, formatMoney, todayVN } from '@/lib/format'
 import { isCurrentOccupant } from '../contractRules'
 import { useBillingPeriods } from '../hooks'
 import { MeterReadingsFields } from './MeterReadingsFields'
@@ -252,7 +252,7 @@ export function ResignDialog({ contract: c, onClose, onDone }) {
       title="Ký lại cho người còn ở"
       description="Hợp đồng này chuyển sang thanh lý tại ngày bàn giao; hệ thống tạo hợp đồng nháp mới từ hôm sau cho người đứng tên mới."
       size="md"
-      initial={{ handoverDate: todayVN(), representativeRenterId: remaining[0]?.renterId ?? '', endDate: '' }}
+      initial={{ handoverDate: todayVN(), representativeRenterId: remaining[0]?.renterId ?? '', endDate: '', transferDeposit: true }}
       validate={(v) => ({
         handoverDate: !v.handoverDate ? 'Chọn ngày bàn giao.' : null,
         representativeRenterId: !v.representativeRenterId ? 'Chọn người đứng tên mới.' : null,
@@ -265,7 +265,12 @@ export function ResignDialog({ contract: c, onClose, onDone }) {
       }}
       submitLabel="Ký lại"
       onSubmit={async (v) => {
-        const body = { handoverDate: v.handoverDate, representativeRenterId: v.representativeRenterId, endDate: v.endDate || null }
+        const body = {
+          handoverDate: v.handoverDate,
+          representativeRenterId: v.representativeRenterId,
+          endDate: v.endDate || null,
+          transferDeposit: v.transferDeposit,
+        }
         const result = await contractsApi.reSign(c.id, body, { idempotencyKey: idem.keyFor(body) })
         await onDone()
         toast.success('Đã tạo hợp đồng nháp mới — khai lại quan hệ người ở rồi kích hoạt.')
@@ -287,6 +292,14 @@ export function ResignDialog({ contract: c, onClose, onDone }) {
               {...form.field('representativeRenterId')}
             />
             <DateField label="Ngày kết thúc HĐ mới" hint="Trống = không thời hạn" {...form.field('endDate')} />
+            {c.depositHeld > 0 && (
+              <CheckboxField
+                className="span-full"
+                label={`Chuyển cọc đang giữ (${formatMoney(c.depositHeld)}) sang hợp đồng mới`}
+                description="Bỏ tích: cọc ở lại hợp đồng cũ, quyết toán khi hoàn tất thanh lý hợp đồng cũ."
+                {...form.field('transferDeposit', { type: 'checkbox' })}
+              />
+            )}
           </FormGrid>
         )
       }

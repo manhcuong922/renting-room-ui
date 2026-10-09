@@ -29,6 +29,7 @@ export const Permission = Object.freeze({
   RentersAnonymize: 'renters.anonymize', // ẩn danh hồ sơ ngay (không đảo ngược) — chỉ chủ trọ
   ContractsView: 'contracts.view',
   ContractsManage: 'contracts.manage',
+  DebtWriteOff: 'debt.write-off', // bỏ nợ (riêng / khi hoàn tất thanh lý) — chỉ chủ trọ
   ContractTemplatesView: 'contract-templates.view',
   ContractTemplatesManage: 'contract-templates.manage',
   MembersView: 'members.view',
@@ -50,6 +51,7 @@ const PERMISSION_POLICY = {
   [Permission.RentersAnonymize]: Policy.OrgOwner,
   [Permission.ContractsView]: Policy.OrgMember,
   [Permission.ContractsManage]: Policy.OrgMember,
+  [Permission.DebtWriteOff]: Policy.OrgOwner,
   [Permission.ContractTemplatesView]: Policy.OrgMember,
   [Permission.ContractTemplatesManage]: Policy.OrgMember,
   [Permission.MembersView]: Policy.OrgMember,

@@ -185,6 +185,8 @@ export const CONTRACT_FLAGS = {
   ExpiredAwaitingDecision: { label: 'Quá hạn — chờ quyết định', tone: 'danger' },
   Holdover: { label: 'Ở tiếp chưa ký lại', tone: 'orange' },
   MissingSignedDocument: { label: 'Thiếu tài liệu', tone: 'neutral' },
+  DepositShort: { label: 'Cọc thực nhận thiếu', tone: 'warning' },
+  DepositDueForReturn: { label: 'Tới hạn trả cọc', tone: 'orange' },
 }
 
 // Khoản thu (fees.md)
