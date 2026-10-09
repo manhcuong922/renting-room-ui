@@ -65,3 +65,12 @@ export function satisfiesPolicy(user, policy) {
 export function hasPermission(user, permission) {
   return satisfiesPolicy(user, PERMISSION_POLICY[permission])
 }
+
+/**
+ * Xem / xuất số giấy tờ đầy đủ (conventions.md#dữ-liệu-cá-nhân): chủ trọ luôn có; phó quản lý khi chủ trọ cấp
+ * (`canViewSensitiveData` của GET /me). Không có → ẩn nút 👁 và ô "Hiện đầy đủ số giấy tờ".
+ */
+export function canViewSensitiveData(user) {
+  if (!satisfiesPolicy(user, Policy.OrgMember)) return false
+  return user.role === Role.OrgOwner || user.canViewSensitiveData === true
+}

@@ -1,7 +1,7 @@
 // Lỗi chuẩn hóa từ ProblemDetails (RFC 9457) của backend — xem renting_room/docs/api/errors.md.
 // Luôn xử lý theo `code`, không theo câu chữ; `detail` là tiếng Việt hiển thị được (trừ 5xx).
 export class ApiError extends Error {
-  constructor({ status, code, title, detail, errors, traceId, instance, retryAfter, cause } = {}) {
+  constructor({ status, code, title, detail, errors, traceId, instance, retryAfter, extensions, cause } = {}) {
     super(detail || title || code || 'Đã có lỗi xảy ra', { cause })
     this.name = 'ApiError'
     this.status = status ?? 0
@@ -12,6 +12,8 @@ export class ApiError extends Error {
     this.traceId = traceId ?? null
     this.instance = instance ?? null
     this.retryAfter = retryAfter ?? null
+    // Trường nghiệp vụ kèm lỗi: existingRenterId, meterIds, previousValue, outstanding…
+    this.extensions = extensions ?? {}
   }
 
   get isValidation() {
@@ -56,6 +58,7 @@ export class ApiError extends Error {
       traceId: problem.traceId,
       instance: problem.instance,
       retryAfter,
+      extensions: Object.fromEntries(Object.entries(problem).filter(([key]) => !PROBLEM_KEYS.has(key))),
     })
   }
 
@@ -71,6 +74,8 @@ export class ApiError extends Error {
     })
   }
 }
+
+const PROBLEM_KEYS = new Set(['type', 'status', 'code', 'title', 'detail', 'errors', 'traceId', 'instance'])
 
 function fallbackCode(status) {
   if (status === 401) return 'AUTHENTICATION_REQUIRED'
@@ -90,6 +95,7 @@ export function getErrorMessage(error) {
       : 'Đã có lỗi xảy ra.'
   }
   if (error.status === 403 && error.code === 'FORBIDDEN') return 'Bạn không có quyền thực hiện thao tác này.'
+  if (error.code === 'SENSITIVE_DATA_FORBIDDEN') return 'Bạn chưa được cấp quyền xem số giấy tờ đầy đủ — cần chủ trọ cấp quyền.'
   if (error.status === 404 && !error.detail) return 'Không tìm thấy dữ liệu.'
   if (error.status === 413) return 'Dữ liệu quá lớn.'
   if (error.status === 429) {

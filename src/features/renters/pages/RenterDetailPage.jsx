@@ -5,6 +5,7 @@ import { Link, useParams } from 'react-router'
 import { contractsApi, queryKeys, rentersApi } from '@/api'
 import { Button, DataTable, DescriptionList, EmptyState, PageHeader, QueryView, SecretValue, Section, StatusBadge } from '@/components/ui'
 import { CONTRACT_STATUS, GENDER_LABELS, ID_DOCUMENT_TYPE_LABELS } from '@/constants/enums'
+import { useCanViewSensitiveData } from '@/features/auth/AuthContext'
 import { formatContractTerm } from '@/features/contracts/contractRules'
 import { formatDate, formatDateTime, formatMoney } from '@/lib/format'
 import { RenterFormDialog } from '../components/RenterFormDialog'
@@ -23,6 +24,7 @@ const CONTRACT_COLUMNS = [
 export default function RenterDetailPage() {
   const { id } = useParams()
   const query = useRenter(id)
+  const canViewSensitive = useCanViewSensitiveData()
   const [editing, setEditing] = useState(false)
   const contracts = useQuery({
     queryKey: queryKeys.contracts.list({ renterId: id, pageSize: 50 }),
@@ -51,7 +53,7 @@ export default function RenterDetailPage() {
                 { label: 'Số điện thoại', value: r.phone },
                 { label: 'Email', value: r.email },
                 { label: 'Loại giấy tờ', value: ID_DOCUMENT_TYPE_LABELS[r.idType] ?? r.idType },
-                { label: 'Số giấy tờ', value: <SecretValue masked={r.idNumberMasked} onReveal={() => rentersApi.revealIdNumber(r.id)} /> },
+                { label: 'Số giấy tờ', value: <SecretValue masked={r.idNumberMasked} onReveal={canViewSensitive ? () => rentersApi.revealIdNumber(r.id) : undefined} /> },
                 { label: 'Ngày cấp', value: r.idIssueDate ? formatDate(r.idIssueDate) : null },
                 { label: 'Nơi cấp', value: r.idIssuePlace },
                 { label: 'Quốc tịch', value: r.nationality },

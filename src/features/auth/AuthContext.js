@@ -1,12 +1,12 @@
 import { createContext, useContext } from 'react'
-import { hasPermission } from './permissions'
+import { canViewSensitiveData, hasPermission } from './permissions'
 
 export const AuthContext = createContext(null)
 
 /**
  * @returns {{
  *   status: 'loading' | 'authenticated' | 'anonymous' | 'error',
- *   user: null | { id: string, fullName: string, role: string, mustChangePassword: boolean, organization: null | { id: string, code: string, name: string } },
+ *   user: null | { id: string, fullName: string, role: string, mustChangePassword: boolean, canViewSensitiveData: boolean, organization: null | { id: string, code: string, name: string } },
  *   endReason: null | import('@/lib/http/ApiError').ApiError,
  *   login: (credentials: { username: string, password: string }) => Promise<object>,
  *   changePassword: (body: { currentPassword: string, newPassword: string }) => Promise<object>,
@@ -23,4 +23,8 @@ export function useAuth() {
 
 export function usePermission(permission) {
   return hasPermission(useAuth().user, permission)
+}
+
+export function useCanViewSensitiveData() {
+  return canViewSensitiveData(useAuth().user)
 }

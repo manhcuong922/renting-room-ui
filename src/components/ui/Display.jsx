@@ -75,11 +75,14 @@ export function CopyButton({ value, label = 'Sao chép' }) {
 /**
  * Số giấy tờ đã che + nút 👁 xem đầy đủ. Mỗi lần xem server ghi log → không tự gọi, không cache,
  * tự ẩn lại sau 30 giây (docs/api/renters.md#xem-số-giấy-tờ).
+ * Không truyền `onReveal` (không có quyền dữ liệu nhạy cảm) → chỉ hiện số đã che, không có nút.
+ * 429 (5 lần/phút mỗi tài khoản) → khóa nút theo Retry-After.
  */
 export function SecretValue({ masked, onReveal }) {
   const [value, setValue] = useState(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
+  const [cooldown, setCooldown] = useState(0)
 
   useEffect(() => {
     if (!value) return undefined
@@ -87,7 +90,14 @@ export function SecretValue({ masked, onReveal }) {
     return () => clearTimeout(timer)
   }, [value])
 
+  useEffect(() => {
+    if (cooldown <= 0) return undefined
+    const timer = setTimeout(() => setCooldown((s) => s - 1), 1000)
+    return () => clearTimeout(timer)
+  }, [cooldown])
+
   if (!masked) return '—'
+  if (!onReveal) return <span className={styles.secretValue}>{masked}</span>
 
   const toggle = async () => {
     if (value) return setValue(null)
@@ -98,6 +108,7 @@ export function SecretValue({ masked, onReveal }) {
       setValue(result.idNumber)
     } catch (err) {
       setError(getErrorMessage(err))
+      if (err?.status === 429) setCooldown(err.retryAfter ?? 60)
     } finally {
       setBusy(false)
     }
@@ -106,7 +117,7 @@ export function SecretValue({ masked, onReveal }) {
   return (
     <span className={styles.secret}>
       <span className={styles.secretValue}>{value ?? masked}</span>
-      <Button variant="ghost" size="sm" iconOnly icon={value ? EyeOff : Eye} loading={busy} onClick={toggle}>
+      <Button variant="ghost" size="sm" iconOnly icon={value ? EyeOff : Eye} loading={busy} disabled={cooldown > 0} onClick={toggle}>
         {value ? 'Ẩn số giấy tờ' : 'Hiện số giấy tờ'}
       </Button>
       {error && <span className={styles.secretError}>{error}</span>}

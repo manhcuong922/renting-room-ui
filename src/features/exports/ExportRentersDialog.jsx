@@ -13,6 +13,7 @@ import {
   useToast,
 } from '@/components/ui'
 import { EXPORT_LAYOUT_LABELS, toOptions } from '@/constants/enums'
+import { useCanViewSensitiveData } from '@/features/auth/AuthContext'
 import { usePropertyOptions, usePropertyRooms, useRoomGroups } from '@/features/shared/queries'
 import { useForm } from '@/hooks/useForm'
 import { saveBlob } from '@/lib/download'
@@ -38,6 +39,8 @@ function validate(v) {
  */
 export function ExportRentersDialog({ open, onClose, presetPropertyIds = [] }) {
   const toast = useToast()
+  // Không có quyền dữ liệu nhạy cảm → ẩn ô "Hiện đầy đủ số giấy tờ" (gửi true sẽ bị 403 SENSITIVE_DATA_FORBIDDEN).
+  const canViewSensitive = useCanViewSensitiveData()
   const properties = usePropertyOptions()
   const form = useForm(
     {
@@ -66,7 +69,7 @@ export function ExportRentersDialog({ open, onClose, presetPropertyIds = [] }) {
       fromDate: v.time === 'range' ? v.fromDate : null,
       toDate: v.time === 'range' ? v.toDate || v.fromDate : null,
       layout: v.layout,
-      includeSensitive: v.includeSensitive,
+      includeSensitive: canViewSensitive && v.includeSensitive,
     }
     const { blob, filename } = await exportsApi.renters(body)
     saveBlob(blob, filename ?? defaultFileName())
@@ -167,12 +170,17 @@ export function ExportRentersDialog({ open, onClose, presetPropertyIds = [] }) {
         <FormSection title="Trình bày">
           <div style={{ display: 'grid', gap: 'var(--space-4)' }}>
             <RadioGroup label="Chia sheet" options={toOptions(EXPORT_LAYOUT_LABELS)} value={form.values.layout} onChange={(v) => form.setValue('layout', v)} />
-            <CheckboxField
-              label="Hiện đầy đủ số giấy tờ"
-              description="Dữ liệu cá nhân — thao tác được ghi log kiểm toán. Mặc định số giấy tờ bị che."
-              {...form.field('includeSensitive', { type: 'checkbox' })}
-            />
-            {form.values.includeSensitive && <Alert tone="warning">File chứa số giấy tờ đầy đủ. Chỉ gửi cho cơ quan có thẩm quyền, không chia sẻ công khai.</Alert>}
+            {canViewSensitive && (
+              <CheckboxField
+                label="Hiện đầy đủ số giấy tờ"
+                description="Dữ liệu cá nhân — thao tác được ghi log kiểm toán. Mặc định số giấy tờ bị che."
+                {...form.field('includeSensitive', { type: 'checkbox' })}
+              />
+            )}
+            {canViewSensitive && form.values.includeSensitive && (
+              <Alert tone="warning">File chứa số giấy tờ đầy đủ. Chỉ gửi cho cơ quan có thẩm quyền, không chia sẻ công khai.</Alert>
+            )}
+            <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>Giới hạn 5 lần xuất / phút mỗi tài khoản.</p>
           </div>
         </FormSection>
       </form>
