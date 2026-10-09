@@ -9,7 +9,8 @@ import { formatDate } from '@/lib/format'
 import { RenterFormDialog } from '../components/RenterFormDialog'
 import { useRenterList } from '../hooks'
 
-const DEFAULTS = { q: '', idNumber: '', idType: '', page: 1 }
+// Số giấy tờ KHÔNG đặt trên URL (lịch sử trình duyệt, log proxy, Referer) — giữ trong state, tìm qua POST /renters/search.
+const DEFAULTS = { q: '', page: 1 }
 
 const COLUMNS = [
   {
@@ -24,23 +25,28 @@ const COLUMNS = [
   },
   { key: 'dob', header: 'Ngày sinh', cell: (r) => `${formatDate(r.dateOfBirth)} · ${GENDER_LABELS[r.gender] ?? ''}` },
   { key: 'phone', header: 'Điện thoại', cell: (r) => r.phone ?? '—' },
-  { key: 'id', header: 'Giấy tờ', cell: (r) => `${ID_DOCUMENT_TYPE_LABELS[r.idType] ?? r.idType} ${r.idNumberMasked ?? ''}` },
+  { key: 'id', header: 'Giấy tờ', cell: (r) => (r.idType ? `${ID_DOCUMENT_TYPE_LABELS[r.idType] ?? r.idType} ${r.idNumberMasked ?? ''}` : 'Chưa có giấy tờ') },
   { key: 'address', header: 'Thường trú', hideOnMobile: true, cell: (r) => r.permanentAddress ?? '—' },
 ]
 
-// docs/api/renters.md#tìm-kiếm — `q`: một phần họ tên (không cần dấu) hoặc đúng SĐT; `idNumber`: khớp CHÍNH XÁC.
+// docs/api/renters.md#tìm-kiếm — `q`: một phần họ tên (không cần dấu) hoặc đúng SĐT; số giấy tờ: khớp CHÍNH XÁC (POST /renters/search).
 export default function RentersPage() {
   const navigate = useNavigate()
   const { params, set, searchInput } = useListParams(DEFAULTS, { searchKey: 'q' })
-  const [idInput, setIdInput] = useState(params.idNumber)
+  const [idInput, setIdInput] = useState('')
+  const [idSearch, setIdSearch] = useState({ idNumber: '', idType: '' })
   const [dialog, setDialog] = useState(null) // 'create' | 'export'
   const query = useRenterList({
     q: params.q || undefined,
-    idNumber: params.idNumber || undefined,
-    idType: params.idNumber ? params.idType || undefined : undefined,
+    idNumber: idSearch.idNumber || undefined,
+    idType: idSearch.idNumber ? idSearch.idType || undefined : undefined,
     page: params.page,
     pageSize: 20,
   })
+  const searchById = (changes) => {
+    setIdSearch((prev) => ({ ...prev, ...changes }))
+    set({ page: 1 })
+  }
 
   return (
     <>
@@ -65,7 +71,7 @@ export default function RentersPage() {
           style={{ display: 'contents' }}
           onSubmit={(e) => {
             e.preventDefault()
-            set({ idNumber: idInput.replace(/\s+/g, '') })
+            searchById({ idNumber: idInput.replace(/\s+/g, '') })
           }}
         >
           <TextField
@@ -75,12 +81,18 @@ export default function RentersPage() {
             value={idInput}
             onChange={(e) => {
               setIdInput(e.target.value)
-              if (!e.target.value) set({ idNumber: '' })
+              if (!e.target.value) searchById({ idNumber: '' })
             }}
           />
         </form>
-        {params.idNumber && (
-          <SelectField aria-label="Loại giấy tờ" placeholder="Mọi loại giấy tờ" options={toOptions(ID_DOCUMENT_TYPE_LABELS)} value={params.idType} onChange={(e) => set({ idType: e.target.value })} />
+        {idSearch.idNumber && (
+          <SelectField
+            aria-label="Loại giấy tờ"
+            placeholder="Mọi loại giấy tờ"
+            options={toOptions(ID_DOCUMENT_TYPE_LABELS)}
+            value={idSearch.idType}
+            onChange={(e) => searchById({ idType: e.target.value })}
+          />
         )}
       </Toolbar>
 
@@ -90,8 +102,8 @@ export default function RentersPage() {
         empty={
           <EmptyState
             icon={Users}
-            title={params.q || params.idNumber ? 'Không tìm thấy người thuê' : 'Chưa có hồ sơ người thuê'}
-            description={params.idNumber ? 'Tìm theo số giấy tờ cần nhập đủ, chính xác.' : undefined}
+            title={params.q || idSearch.idNumber ? 'Không tìm thấy người thuê' : 'Chưa có hồ sơ người thuê'}
+            description={idSearch.idNumber ? 'Tìm theo số giấy tờ cần nhập đủ, chính xác. Hồ sơ đã ẩn danh không hiện trong tìm kiếm.' : undefined}
           />
         }
       >

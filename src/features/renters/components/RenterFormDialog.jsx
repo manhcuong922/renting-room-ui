@@ -7,11 +7,16 @@ import { useInvalidate } from '@/hooks/useAction'
 import { useForm } from '@/hooks/useForm'
 import { useIdempotencyKey } from '@/hooks/useIdempotencyKey'
 import { formatDate } from '@/lib/format'
-import { makeRenterValidate, toRenterBody, toRenterForm } from '../renterForm'
+import { ID_REQUIRED_FROM_AGE, NO_ID_DOCUMENT, makeRenterValidate, toRenterBody, toRenterForm } from '../renterForm'
+
+const ID_TYPE_OPTIONS = [
+  ...toOptions(ID_DOCUMENT_TYPE_LABELS),
+  { value: NO_ID_DOCUMENT, label: `Chưa có giấy tờ (dưới ${ID_REQUIRED_FROM_AGE} tuổi)` },
+]
 
 /**
  * Tạo (renter = null) hoặc sửa hồ sơ người thuê. Cũng dùng làm "Thêm nhanh" trong wizard hợp đồng.
- * Tạo trùng số giấy tờ (409 RENTER_ID_NUMBER_EXISTS) → tìm hồ sơ cũ và đề xuất dùng hồ sơ đó (onUseExisting).
+ * Tạo trùng số giấy tờ (409 RENTER_ID_NUMBER_EXISTS, body có existingRenterId) → mở hồ sơ cũ và đề xuất dùng hồ sơ đó (onUseExisting).
  * onSaved(renterFull) nhận hồ sơ đầy đủ sau khi lưu.
  */
 export function RenterFormDialog({ renter, onClose, onSaved, onUseExisting }) {
@@ -22,7 +27,7 @@ export function RenterFormDialog({ renter, onClose, onSaved, onUseExisting }) {
   const form = useForm(toRenterForm(renter), {
     validate: makeRenterValidate(renter),
     serverPrefix: editing ? 'renter' : undefined,
-    codeFields: { ID_NUMBER_REQUIRED: 'idNumber', RENTER_ID_NUMBER_EXISTS: 'idNumber' },
+    codeFields: { ID_NUMBER_REQUIRED: 'idNumber', RENTER_ID_NUMBER_EXISTS: 'idNumber', RENTER_ANONYMIZED: 'fullName' },
   })
 
   const submit = form.handleSubmit(async (v) => {
@@ -38,15 +43,14 @@ export function RenterFormDialog({ renter, onClose, onSaved, onUseExisting }) {
       onSaved?.(saved)
       onClose()
     } catch (error) {
-      if (error.code === 'RENTER_ID_NUMBER_EXISTS') {
-        const found = await rentersApi.list({ idNumber: body.idNumber, idType: body.idType, pageSize: 1 }).catch(() => null)
-        setExisting(found?.items?.[0] ?? null)
-      }
+      const existingId = error.code === 'RENTER_ID_NUMBER_EXISTS' ? error.extensions?.existingRenterId : null
+      if (existingId) setExisting(await rentersApi.get(existingId).catch(() => null))
       throw error
     }
   })
 
   const idType = form.values.idType
+  const keepsOldNumber = editing && Boolean(renter.idNumberMasked) && renter.idType === idType
 
   return (
     <Modal
@@ -72,7 +76,8 @@ export function RenterFormDialog({ renter, onClose, onSaved, onUseExisting }) {
           <div style={{ display: 'grid', gap: 'var(--space-3)', marginBottom: 'var(--space-4)' }}>
             {existing ? (
               <Alert tone="warning">
-                Số giấy tờ đã có hồ sơ: <strong>{existing.fullName}</strong> (sinh {formatDate(existing.dateOfBirth)}).{' '}
+                Số giấy tờ đã có hồ sơ: <strong>{existing.fullName}</strong> (sinh {formatDate(existing.dateOfBirth)}). Một người được đứng tên
+                nhiều phòng, nhưng là người ở thì chỉ ở 1 phòng.{' '}
                 {onUseExisting ? (
                   <Button size="sm" variant="secondary" onClick={() => onUseExisting(existing)}>
                     Dùng hồ sơ này
@@ -99,19 +104,23 @@ export function RenterFormDialog({ renter, onClose, onSaved, onUseExisting }) {
 
         <FormSection
           title="Giấy tờ tùy thân"
-          description="Trẻ em chưa có thẻ: chọn CCCD và nhập số định danh cá nhân 12 số (trên giấy khai sinh / VNeID), bỏ trống ngày cấp, nơi cấp."
+          description={`Từ ${ID_REQUIRED_FROM_AGE} tuổi bắt buộc. Trẻ dưới ${ID_REQUIRED_FROM_AGE} tuổi: chọn "Chưa có giấy tờ", hoặc CCCD + số định danh cá nhân 12 số nếu có. Người chưa có giấy tờ không đứng tên hợp đồng được.`}
         >
           <FormGrid>
-            <SelectField label="Loại giấy tờ" required options={toOptions(ID_DOCUMENT_TYPE_LABELS)} {...form.field('idType')} />
-            <TextField
-              label={ID_NUMBER_HINTS[idType]}
-              required={!editing || renter.idType !== idType}
-              autoComplete="off"
-              placeholder={editing && renter.idType === idType ? `${renter.idNumberMasked} (để trống = giữ nguyên)` : undefined}
-              {...form.field('idNumber')}
-            />
-            <DateField label="Ngày cấp" {...form.field('idIssueDate')} />
-            <TextField label="Nơi cấp" maxLength={200} {...form.field('idIssuePlace')} />
+            <SelectField label="Loại giấy tờ" options={ID_TYPE_OPTIONS} {...form.field('idType')} />
+            {idType !== NO_ID_DOCUMENT && (
+              <>
+                <TextField
+                  label={ID_NUMBER_HINTS[idType]}
+                  required={!keepsOldNumber}
+                  autoComplete="off"
+                  placeholder={keepsOldNumber ? `${renter.idNumberMasked} (để trống = giữ nguyên)` : undefined}
+                  {...form.field('idNumber')}
+                />
+                <DateField label="Ngày cấp" {...form.field('idIssueDate')} />
+                <TextField label="Nơi cấp" maxLength={200} {...form.field('idIssuePlace')} />
+              </>
+            )}
             <TextField
               label="Quốc tịch"
               maxLength={2}

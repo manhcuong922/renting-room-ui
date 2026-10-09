@@ -10,7 +10,8 @@ import styles from './RenterPicker.module.css'
 
 /**
  * Ô chọn người thuê có tìm kiếm (docs/api/renters.md — "Ô chọn người thuê trong wizard hợp đồng"):
- * gõ ≥ 2 ký tự → debounce 300ms → GET /renters?q=&pageSize=10; không thấy → "Thêm người thuê mới".
+ * gõ ≥ 2 ký tự → debounce 300ms → GET /renters?q=&pageSize=10; gõ đủ 9/12 chữ số → POST /renters/search (số giấy tờ trong body);
+ * không thấy → "Thêm người thuê mới". Hồ sơ ẩn danh không bao giờ có trong kết quả.
  * value / onChange: object người thuê (RenterDto) hoặc null.
  */
 export function RenterPicker({ label, value, onChange, excludeIds = [], error, required, hint }) {
@@ -39,7 +40,7 @@ export function RenterPicker({ label, value, onChange, excludeIds = [], error, r
           <div>
             <strong>{value.fullName}</strong>
             <div className={styles.meta}>
-              {formatDate(value.dateOfBirth)} · {value.phone ?? 'chưa có SĐT'} · {value.idNumberMasked}
+              {formatDate(value.dateOfBirth)} · {value.phone ?? 'chưa có SĐT'} · {value.idNumberMasked ?? 'chưa có giấy tờ'}
             </div>
           </div>
           <Button variant="ghost" size="sm" iconOnly icon={X} onClick={() => onChange(null)}>
@@ -109,7 +110,7 @@ export function RenterPicker({ label, value, onChange, excludeIds = [], error, r
               >
                 <strong>{r.fullName}</strong>
                 <span className={styles.meta}>
-                  {formatDate(r.dateOfBirth)} · {r.phone ?? 'chưa có SĐT'} · {r.idNumberMasked}
+                  {formatDate(r.dateOfBirth)} · {r.phone ?? 'chưa có SĐT'} · {r.idNumberMasked ?? 'chưa có giấy tờ'}
                 </span>
               </li>
             ))}
