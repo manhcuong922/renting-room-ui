@@ -53,6 +53,27 @@ export default function MembersPage() {
   const remove = useAction({ mutationFn: (id) => membersApi.remove(id), invalidate, success: 'Đã gỡ khỏi tổ chức', toastErrors: false })
   const unlock = useAction({ mutationFn: (id) => membersApi.unlock(id), invalidate, success: 'Đã mở khóa' })
   const resetPassword = useAction({ mutationFn: (id) => membersApi.resetPassword(id), invalidate, onSuccess: setTempPassword })
+  const sensitiveAccess = useAction({
+    mutationFn: ({ id, allowed }) => membersApi.setSensitiveDataAccess(id, allowed),
+    invalidate,
+    success: (_, { allowed }) => (allowed ? 'Đã cấp quyền xem số giấy tờ.' : 'Đã thu hồi quyền xem số giấy tờ.'),
+  })
+
+  // Quyền xem / xuất số giấy tờ đầy đủ: chủ trọ luôn có; phó quản lý do chủ trọ bật / tắt (members.md#quyền-xem-dữ-liệu-nhạy-cảm).
+  const sensitiveCell = (m) => {
+    if (m.role === 'OrgOwner') return 'Luôn có'
+    if (m.status === 'Removed') return '—'
+    if (!canManage) return m.canViewSensitiveData ? 'Có' : 'Không'
+    const busy = sensitiveAccess.isPending && sensitiveAccess.variables?.id === m.id
+    return (
+      <CheckboxField
+        label={m.canViewSensitiveData ? 'Được xem' : 'Không'}
+        checked={Boolean(m.canViewSensitiveData)}
+        disabled={busy}
+        onChange={(e) => sensitiveAccess.mutate({ id: m.id, allowed: e.target.checked })}
+      />
+    )
+  }
 
   const columns = [
     {
@@ -77,6 +98,7 @@ export default function MembersPage() {
         </span>
       ),
     },
+    { key: 'sensitive', header: 'Xem số giấy tờ', cell: sensitiveCell },
     { key: 'lastLogin', header: 'Đăng nhập cuối', cell: (m) => (m.lastLoginAt ? formatDateTime(m.lastLoginAt) : 'Chưa đăng nhập') },
     {
       key: 'actions',

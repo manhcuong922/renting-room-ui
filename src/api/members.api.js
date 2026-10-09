@@ -10,4 +10,6 @@ export const membersApi = {
   unlock: (id) => http.post(`/org/members/${id}/unlock`),
   remove: (id) => http.post(`/org/members/${id}/remove`),
   resetPassword: (id) => http.post(`/org/members/${id}/reset-password`),
+  // Cấp / thu hồi quyền xem số giấy tờ đầy đủ của phó quản lý — có hiệu lực ngay.
+  setSensitiveDataAccess: (id, allowed) => http.put(`/org/members/${id}/sensitive-data-access`, { allowed }),
 }

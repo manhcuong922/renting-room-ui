@@ -6,4 +6,7 @@ export const organizationApi = {
   getLessor: (options) => http.get('/org/lessor', options),
   updateLessor: (body) => http.put('/org/lessor', body),
   revealLessorIdNumber: () => http.post('/org/lessor/reveal-id-number'),
+  // Thời gian giữ dữ liệu người thuê (36–120 tháng) + ẩn danh tự động. PUT chỉ chủ trọ.
+  getDataRetention: (options) => http.get('/org/data-retention', options),
+  updateDataRetention: (body) => http.put('/org/data-retention', body),
 }

@@ -14,7 +14,7 @@ export const queryKeys = {
     ...resource('properties'),
     billingPreview: (id, anchorDay, chargeMode) => ['properties', 'billing-preview', id, anchorDay, chargeMode],
   },
-  organization: { all: ['organization'], lessor: ['organization', 'lessor'] },
+  organization: { all: ['organization'], lessor: ['organization', 'lessor'], dataRetention: ['organization', 'data-retention'] },
   rooms: {
     ...resource('rooms'),
     groups: (propertyId) => ['rooms', 'groups', propertyId],

@@ -7,3 +7,10 @@ export function useOrganizationLessor() {
     queryFn: ({ signal }) => organizationApi.getLessor({ signal }),
   })
 }
+
+export function useDataRetention() {
+  return useQuery({
+    queryKey: queryKeys.organization.dataRetention,
+    queryFn: ({ signal }) => organizationApi.getDataRetention({ signal }),
+  })
+}
