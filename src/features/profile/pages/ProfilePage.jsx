@@ -1,15 +1,20 @@
+import { Pencil } from 'lucide-react'
 import { useState } from 'react'
-import { Alert, Badge, Card, PageHeader } from '@/components/ui'
+import { Badge, Button, Card, PageHeader, useToast } from '@/components/ui'
 import { ROLE_LABELS } from '@/constants/enums'
 import { useAuth } from '@/features/auth/AuthContext'
 import { ChangePasswordForm } from '@/features/auth/components/ChangePasswordForm'
+import { canEditOwnProfile } from '@/features/auth/permissions'
 import { formatDateTime } from '@/lib/format'
+import { ProfileEditDialog } from '../components/ProfileEditDialog'
 import styles from './ProfilePage.module.css'
 
-// Hồ sơ của tôi — GET /me + đổi mật khẩu (docs/api/auth.md#hồ-sơ-của-tôi).
+// Hồ sơ của tôi — GET /me, PUT /me (chủ trọ / SystemAdmin) + đổi mật khẩu (docs/api/auth.md#hồ-sơ-của-tôi).
 export default function ProfilePage() {
   const { user } = useAuth()
-  const [changed, setChanged] = useState(false)
+  const toast = useToast()
+  const [editing, setEditing] = useState(false)
+  const canEdit = canEditOwnProfile(user)
 
   const rows = [
     ['Họ tên', user.fullName],
@@ -25,7 +30,14 @@ export default function ProfilePage() {
       <PageHeader title="Hồ sơ của tôi" />
       <div className={styles.layout}>
         <Card>
-          <h2 className={styles.sectionTitle}>Thông tin tài khoản</h2>
+          <div className={styles.sectionHeader}>
+            <h2 className={styles.sectionTitle}>Thông tin tài khoản</h2>
+            {canEdit && (
+              <Button size="sm" variant="secondary" icon={Pencil} onClick={() => setEditing(true)}>
+                Sửa
+              </Button>
+            )}
+          </div>
           <dl className={styles.list}>
             {rows.map(([label, value]) => (
               <div key={label} className={styles.row}>
@@ -34,13 +46,14 @@ export default function ProfilePage() {
               </div>
             ))}
           </dl>
+          {!canEdit && <p className={styles.note}>Phó quản lý không tự sửa hồ sơ — liên hệ chủ trọ để đổi thông tin.</p>}
         </Card>
         <Card>
           <h2 className={styles.sectionTitle}>Đổi mật khẩu</h2>
-          {changed && <Alert tone="info">Đã đổi mật khẩu. Các thiết bị khác đã bị đăng xuất.</Alert>}
-          <ChangePasswordForm onSuccess={() => setChanged(true)} />
+          <ChangePasswordForm onSuccess={() => toast.success('Đã đổi mật khẩu. Các thiết bị khác đã bị đăng xuất.')} />
         </Card>
       </div>
+      {editing && <ProfileEditDialog onClose={() => setEditing(false)} />}
     </>
   )
 }

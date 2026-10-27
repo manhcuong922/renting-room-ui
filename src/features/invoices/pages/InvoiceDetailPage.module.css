@@ -1,0 +1,134 @@
+.alerts {
+  display: grid;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.alerts:empty {
+  display: none;
+}
+
+.issueRow {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.issueList {
+  margin: var(--space-1) 0;
+  padding-left: var(--space-5);
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.table thead th {
+  border-top: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.table .num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.groupRow th {
+  padding-top: var(--space-2);
+  padding-bottom: var(--space-2);
+  background: var(--color-surface-muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.lineName {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+}
+
+.sub {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  font-weight: 400;
+}
+
+.settled td:nth-child(4) strong {
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+}
+
+.rowActions {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.empty {
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.sums {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-4) var(--space-4) 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.sums > div,
+.debts li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.sums dd {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.grand {
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border);
+  font-size: var(--text-md);
+  font-weight: 700;
+}
+
+.debts {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.note {
+  white-space: pre-line;
+}
+
+.muted {
+  color: var(--color-text-muted);
+}

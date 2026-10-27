@@ -6,6 +6,7 @@ import { AuthLayout } from '@/layouts/AuthLayout/AuthLayout'
 import NotFoundPage from '@/pages/NotFoundPage'
 import RouteErrorPage from '@/pages/RouteErrorPage'
 import {
+  AuditLogsPage,
   ChangePasswordPage,
   ContractDataReviewPage,
   ContractDetailPage,
@@ -14,8 +15,11 @@ import {
   ContractTemplateEditorPage,
   ContractTemplatesPage,
   DashboardPage,
+  InvoiceDetailPage,
+  InvoicesPage,
   LoginPage,
   MembersPage,
+  MeterReadingSheetPage,
   OrganizationDetailPage,
   OrganizationSettingsPage,
   OrganizationsPage,
@@ -25,8 +29,10 @@ import {
   PropertyDetailPage,
   RenterDetailPage,
   RentersPage,
+  RoomChargesPage,
   RoomDetailPage,
   RoomsPage,
+  TenancyHistoryPage,
 } from './lazyPages'
 
 // Bảo vệ 2 lớp:
@@ -106,6 +112,24 @@ export const router = createBrowserRouter([
                     path: 'contract-templates/:id',
                     element: <ContractTemplateEditorPage />,
                     handle: { title: 'Sửa mẫu hợp đồng', permission: Permission.ContractTemplatesManage },
+                  },
+                  {
+                    path: 'meter-readings',
+                    element: <MeterReadingSheetPage />,
+                    handle: { title: 'Ghi chỉ số điện nước', permission: Permission.BillingView },
+                  },
+                  { path: 'invoices', element: <InvoicesPage />, handle: { title: 'Phiếu tiền phòng', permission: Permission.BillingView } },
+                  {
+                    path: 'invoices/:id',
+                    element: <InvoiceDetailPage />,
+                    handle: { title: 'Chi tiết phiếu', permission: Permission.BillingView },
+                  },
+                  { path: 'room-charges', element: <RoomChargesPage />, handle: { title: 'Khoản phát sinh', permission: Permission.BillingView } },
+                  { path: 'audit-logs', element: <AuditLogsPage />, handle: { title: 'Nhật ký thao tác', permission: Permission.AuditView } },
+                  {
+                    path: 'tenancy-history',
+                    element: <TenancyHistoryPage />,
+                    handle: { title: 'Ai đã ở phòng nào', permission: Permission.RentersView },
                   },
                   { path: 'members', element: <MembersPage />, handle: { title: 'Thành viên', permission: Permission.MembersView } },
                   {

@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { authApi } from '@/api'
+import { normalizeEmail, normalizePhone } from '@/lib/contact'
 import { authEvents } from '@/lib/http/authEvents'
 import { tokenStore } from '@/lib/http/tokenStore'
 import { AuthContext } from './AuthContext'
@@ -162,6 +163,24 @@ export function AuthProvider({ children }) {
     return user
   }, [])
 
+  // PUT /me. Đổi SĐT / email (tên đăng nhập) ⇒ server vô hiệu mọi phiên: kết thúc phiên ở đây và báo người gọi đưa về đăng nhập.
+  const updateProfile = useCallback(
+    async (body) => {
+      const current = userRef.current
+      await authApi.updateMe(body)
+      const loginChanged = normalizePhone(body.phone) !== (current?.phone ?? null) || normalizeEmail(body.email) !== (current?.email ?? null)
+      if (loginChanged) {
+        tokenStore.clear()
+        toAnonymous({ loggedOut: true })
+        return { reauthenticate: true }
+      }
+      const user = await authApi.me()
+      applyUser(user)
+      return { reauthenticate: false }
+    },
+    [toAnonymous, applyUser],
+  )
+
   const logout = useCallback(async () => {
     const refreshToken = tokenStore.getRefreshToken()
     tokenStore.clear()
@@ -178,11 +197,14 @@ export function AuthProvider({ children }) {
     }
   }, [toAnonymous])
 
+  // Tải lại GET /me ngay (VD vừa đổi tên tổ chức, vừa bị báo thiếu quyền).
+  const refreshUser = useCallback(() => revalidate({ force: true }), [revalidate])
+
   const retry = useCallback(() => setState((s) => ({ ...s, status: 'loading' })), [])
 
   const value = useMemo(
-    () => ({ ...state, login, changePassword, logout, logoutAll, retry }),
-    [state, login, changePassword, logout, logoutAll, retry],
+    () => ({ ...state, login, changePassword, updateProfile, refreshUser, logout, logoutAll, retry }),
+    [state, login, changePassword, updateProfile, refreshUser, logout, logoutAll, retry],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

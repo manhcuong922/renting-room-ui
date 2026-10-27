@@ -157,10 +157,13 @@ async function getAccessToken() {
   return token
 }
 
+// 403 cho biết quyền trên màn hình đã cũ (auth.md#quyền-theo-từng-người): tải lại GET /me, không đăng xuất.
+const PERMISSION_CHANGED_CODES = new Set(['FORBIDDEN', 'WRITE_OFF_NOT_ALLOWED', 'SENSITIVE_DATA_FORBIDDEN', 'PROFILE_MANAGED_BY_OWNER'])
+
 function handleGlobalError(error) {
   if (error.status === 401 && SESSION_END_CODES.has(error.code)) endSession(error)
   else if (error.status === 403 && error.code === 'PASSWORD_CHANGE_REQUIRED') authEvents.emit('password-change-required', error)
-  else if (error.status === 403 && error.code === 'FORBIDDEN') authEvents.emit('forbidden', error)
+  else if (error.status === 403 && PERMISSION_CHANGED_CODES.has(error.code)) authEvents.emit('forbidden', error)
   else if (error.status === 403 && error.code === 'ORGANIZATION_SUSPENDED') endSession(error)
   else if (error.status === 423) endSession(error)
 }

@@ -1,4 +1,5 @@
 import { Alert, FormGrid, FormSection, TextAreaField, TextField } from '@/components/ui'
+import { AdminUnitFields } from '@/features/shared/AdminUnitFields'
 import { BillingFields } from './BillingFields'
 
 /**
@@ -20,8 +21,17 @@ export function PropertyFormFields({ form, creating }) {
           )}
           <TextField label="Tên khu" required maxLength={200} className={creating ? undefined : 'span-full'} {...form.field('name')} />
           <TextField label="Số nhà, ngõ, đường" required maxLength={300} className="span-full" {...form.field('address.streetAddress')} />
-          <TextField label="Xã / phường" required {...form.field('address.communeName')} />
-          <TextField label="Tỉnh / thành phố" required {...form.field('address.provinceName')} />
+          <AdminUnitFields
+            required
+            value={form.values.address}
+            errors={{ provinceName: form.errors['address.provinceName'], communeName: form.errors['address.communeName'] }}
+            onChange={(unit) => {
+              form.setValue('address.provinceName', unit.provinceName)
+              form.setValue('address.provinceCode', unit.provinceCode)
+              form.setValue('address.communeName', unit.communeName)
+              form.setValue('address.communeCode', unit.communeCode)
+            }}
+          />
           <TextField label="Mã khách hàng điện lực (EVN)" maxLength={20} {...form.field('evnCustomerCode')} />
           <TextAreaField label="Mô tả" rows={2} className="span-full" {...form.field('description')} />
         </FormGrid>

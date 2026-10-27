@@ -12,4 +12,8 @@ export const membersApi = {
   resetPassword: (id) => http.post(`/org/members/${id}/reset-password`),
   // Cấp / thu hồi quyền xem số giấy tờ đầy đủ của phó quản lý — có hiệu lực ngay.
   setSensitiveDataAccess: (id, allowed) => http.put(`/org/members/${id}/sensitive-data-access`, { allowed }),
+  // Bật / tắt quyền bỏ nợ cho riêng từng phó quản lý (mặc định tắt) → 200 thành viên (canWriteOff).
+  setWriteOffPermission: (id, allowed) => http.put(`/org/members/${id}/write-off-permission`, { allowed }),
+  // Nhật ký đăng nhập của các tài khoản trong tổ chức — chỉ chủ trọ; phân trang, mới nhất trước, giữ 180 ngày.
+  loginEvents: (query, options) => http.get('/org/login-events', { ...options, query }),
 }

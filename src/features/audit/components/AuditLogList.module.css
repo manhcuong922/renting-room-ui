@@ -1,0 +1,32 @@
+.changes {
+  display: grid;
+  gap: 2px;
+  max-width: 520px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+
+.field {
+  color: var(--color-text-muted);
+}
+
+.old {
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+}
+
+.long {
+  display: inline;
+}
+
+.long summary {
+  display: inline;
+  cursor: pointer;
+}
+
+.long[open] summary {
+  display: none;
+}

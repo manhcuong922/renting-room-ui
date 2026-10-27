@@ -1,5 +1,5 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { contractsApi, invoicesApi, queryKeys } from '@/api'
+import { contractsApi, queryKeys } from '@/api'
 
 export function useContractList(params) {
   return useQuery({
@@ -25,15 +25,16 @@ export function useBillingPeriods(id, until) {
   })
 }
 
-/** Phiếu quyết toán (type Final, chưa hủy) của HĐ đang thanh lý — để biết đã lập / đã chốt chưa. */
-export function useFinalInvoice(c, { enabled }) {
+/**
+ * Màn thanh lý (contracts.md#xem-trước): kỳ cuối + số tiền 3 cách, kỳ chưa chốt, hóa đơn từ ngày trả phòng, nợ, cần trả lại, khoản chưa xử lý, cọc.
+ * HĐ còn hiệu lực: `actualEndDate` để xem trước trước khi bắt đầu thanh lý.
+ */
+export function useLiquidationPreview(id, { enabled, actualEndDate }) {
   return useQuery({
-    queryKey: queryKeys.invoices.list({ contractId: c.id, final: true }),
-    queryFn: async ({ signal }) => {
-      const page = await invoicesApi.list({ contractId: c.id, pageSize: 100 }, { signal })
-      return page.items.find((i) => i.type === 'Final' && i.status !== 'Void') ?? null
-    },
+    queryKey: queryKeys.contracts.liquidationPreview(id, actualEndDate),
+    queryFn: ({ signal }) => contractsApi.liquidationPreview(id, { actualEndDate: actualEndDate || undefined }, { signal }),
     enabled,
+    placeholderData: keepPreviousData,
   })
 }
 

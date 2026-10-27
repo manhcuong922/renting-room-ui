@@ -4,6 +4,11 @@ import { useParams } from 'react-router'
 import { propertiesApi, queryKeys } from '@/api'
 import { Alert, Badge, Button, Card, ConfirmDialog, PageHeader, QueryView, TabPanel, Tabs } from '@/components/ui'
 import { ExportRentersDialog } from '@/features/exports/ExportRentersDialog'
+import { usePermission } from '@/features/auth/AuthContext'
+import { Permission } from '@/features/auth/permissions'
+import { FeesTab } from '@/features/fees/components/FeesTab'
+import { ImportTab } from '@/features/imports/components/ImportTab'
+import { PropertyMetersTab } from '@/features/meters/components/PropertyMetersTab'
 import { useAction } from '@/hooks/useAction'
 import { useTabParam } from '@/hooks/useTabParam'
 import { BillingTab } from '../components/BillingTab'
@@ -15,12 +20,13 @@ import { useProperty } from '../hooks'
 
 const TAB_PREFIX = 'property'
 
-// docs/api/properties.md#chi-tiết — tab: Phòng · Thông tin · Kỳ thu · Bên cho thuê · Ngân hàng · Nội quy · Nhóm phòng.
+// docs/api/properties.md#chi-tiết — tab: Phòng · Khoản thu · Công tơ · Thông tin · Kỳ thu · Bên cho thuê · Ngân hàng · Nội quy · Nhóm phòng.
 export default function PropertyDetailPage() {
   const { id } = useParams()
   const query = useProperty(id)
   const [tab, setTab] = useTabParam('rooms')
   const [dialog, setDialog] = useState(null) // 'archive' | 'restore' | 'export'
+  const canImport = usePermission(Permission.ImportsManage)
 
   const invalidate = [queryKeys.properties.all, queryKeys.rooms.all]
   const archive = useAction({ mutationFn: () => propertiesApi.archive(id), invalidate, success: 'Đã ngừng sử dụng khu.', toastErrors: false })
@@ -31,12 +37,16 @@ export default function PropertyDetailPage() {
       {(property) => {
         const tabs = [
           { id: 'rooms', label: 'Phòng' },
+          { id: 'fees', label: 'Khoản thu' },
+          { id: 'meters', label: 'Công tơ' },
           { id: 'info', label: 'Thông tin chung' },
           { id: 'billing', label: 'Kỳ thu' },
           { id: 'lessor', label: 'Bên cho thuê', badge: property.lessor?.isComplete ? '✓' : '!' },
           { id: 'bank', label: 'Ngân hàng' },
           { id: 'rules', label: 'Nội quy' },
           { id: 'groups', label: 'Nhóm phòng' },
+          // Nhập Excel: chỉ chủ trọ.
+          { id: 'import', label: 'Nhập Excel', hidden: !canImport },
         ]
         return (
           <>
@@ -83,8 +93,11 @@ export default function PropertyDetailPage() {
             <TabPanel idPrefix={TAB_PREFIX} id={tab}>
               {tab === 'rooms' && <PropertyRoomsTab property={property} />}
               {tab === 'groups' && <RoomGroupsTab property={property} />}
+              {tab === 'fees' && <FeesTab property={property} />}
+              {tab === 'meters' && <PropertyMetersTab property={property} />}
+              {tab === 'import' && canImport && <ImportTab property={property} />}
               {tab === 'billing' && <BillingTab key={property.version} property={property} />}
-              {!['rooms', 'groups', 'billing'].includes(tab) && (
+              {!['rooms', 'groups', 'billing', 'fees', 'meters', 'import'].includes(tab) && (
                 <Card>
                   {tab === 'info' && <PropertyInfoTab key={property.version} property={property} />}
                   {tab === 'lessor' && <PropertyLessorTab key={property.version} property={property} />}

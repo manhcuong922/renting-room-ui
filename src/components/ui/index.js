@@ -1,6 +1,7 @@
 export { Badge } from './Badge'
 export { Button, ButtonLink } from './Button'
 export { Card } from './Card'
+export { Combobox } from './Combobox'
 export { ConfirmDialog } from './ConfirmDialog'
 export { DataTable, TableSkeleton } from './DataTable'
 export { CopyButton, DescriptionList, Section, SecretValue, StatusBadge, TempPasswordDialog, Toolbar } from './Display'

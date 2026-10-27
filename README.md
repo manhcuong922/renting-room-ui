@@ -45,8 +45,19 @@ src/
 | `rooms` | Sơ đồ theo tầng / bảng, lọc khu-trạng thái-tầng-quá hạn · nhãn Còn nợ / Quá hạn / cờ hợp đồng · thêm phòng · tạo hàng loạt · sửa giá niêm yết → hỏi áp cho người đang thuê · chi tiết: bảo trì, ngừng dùng, khôi phục, lịch sử hợp đồng |
 | `renters` | Tìm theo tên không dấu / SĐT / đủ số giấy tờ (POST /renters/search, không đặt số lên URL) · thêm / sửa (trẻ < 14 tuổi chưa có giấy tờ; trùng số giấy tờ → mở hồ sơ cũ) · ẩn danh (chủ trọ, xác nhận 2 bước) · chi tiết + lịch sử thuê |
 | `contract-templates` | Danh sách theo loại · tạo từ mẫu gợi ý · trình soạn điều khoản + trường tùy biến (7 kiểu, tự sinh key) · ngừng dùng / khôi phục |
-| `contracts` | Danh sách (tab trạng thái, sắp hết hạn, quá hạn, không cọc, thiếu tài liệu, cờ cần xử lý) · wizard 7 bước (có "Tính tiền từ ngày", bước Khoản thu) · chi tiết 10 tab: kích hoạt kèm chỉ số nhận phòng, ký lại cho người còn ở, cho ở tiếp, sửa giá thuê, khoản thu theo kỳ, bản ký, tải .docx, báo trả phòng, thanh lý → phiếu quyết toán (chỉ số cuối) → hoàn tất (thu đủ / bỏ nợ) · trang Dữ liệu cần xem lại |
+| `contracts` | Danh sách (tab trạng thái, sắp hết hạn, quá hạn, không cọc, thiếu tài liệu, cờ cần xử lý) · wizard 7 bước (có "Tính tiền từ ngày", bước Khoản thu) · chi tiết 10 tab: kích hoạt kèm chỉ số nhận phòng, ký lại cho người còn ở, cho ở tiếp, sửa giá thuê, khoản thu theo kỳ, bản ký, tải .docx, báo trả phòng, thanh lý → hóa đơn trả phòng (chỉ số cuối) → hoàn tất · trang Dữ liệu cần xem lại |
 | `exports` | Hộp thoại xuất Excel người thuê (khu / tầng / nhóm / phòng, đang ở hoặc khoảng ngày, chia sheet, số giấy tờ đầy đủ) |
+| `auth`, `org` (bổ sung) | Tự sửa hồ sơ (`PUT /me`, đổi SĐT / email phải nhập mật khẩu → đăng nhập lại) · thông tin tổ chức · công tắc quyền bỏ nợ từng phó quản lý · nhật ký đăng nhập |
+| `fees` | Tab Khoản thu của khu: thêm / sửa, bảng giá một giá hoặc theo bậc, ngừng dùng / khôi phục, sao chép từ khu khác, phòng đang dùng dịch vụ (thêm / bớt hàng loạt) |
+| `meters` | Công tơ của phòng (lắp, thay, tháo, lịch sử, sửa / hủy chỉ số) · tab Công tơ của khu (lắp / thay hàng loạt, sản lượng phòng trống) · lưới ghi chỉ số hằng tháng |
+| `invoices` | Danh sách theo khu / tháng + số tổng hợp · tạo nháp (1 khu / mọi khu) · tính lại · chốt nhiều phiếu · thêm phụ thu / giảm trừ cho nhiều phòng · chi tiết phiếu (sửa tay, phụ thu, giảm trừ, hoàn trả, chốt, hủy, xác nhận hoàn tiền) |
+| `room-charges` | Khoản phát sinh theo phòng và theo khu: tạo phụ thu / bù, đánh dấu đã thanh toán, hủy |
+| `payments` | "Đã thu" trên phiếu · thu theo hợp đồng (số nợ hợp đồng) · lịch sử thu, đảo phiếu thu · thanh toán + bỏ phần còn lại, bỏ nợ (theo `canWriteOff`) |
+| `contracts` (bổ sung) | Tiền cọc (đã hoàn trả / bỏ đánh dấu, lọc chưa hoàn cọc) · đồng thuê · đổi người đứng tên · chuyển người · chuyển phòng (từ hôm nay; chuyển nhầm thì chuyển lại trong ngày) · xem trước thanh lý |
+| `renters`, `rooms` (bổ sung) | Ẩn / hiện lại hồ sơ, lọc theo khu / đang ở · ghi nhận đồng ý xử lý dữ liệu · lịch sử thuê của phòng · tìm "ai đã ở phòng nào" |
+| `contracts`, `invoices`, `meters` (20/10/2026) | Thanh lý một màn: kỳ cuối (thu trọn kỳ / theo ngày / không thu, kèm số tiền), kỳ chưa chốt hóa đơn, hóa đơn từ ngày trả phòng, hoàn tất một lần (nợ, tiền trả lại, khoản chưa xử lý, cọc Trả / Không trả / Để sau) · rút báo trả phòng, cờ Quá ngày trả phòng · điều chỉnh chỉ số đã chốt, lịch sử điều chỉnh, "Đã gửi lại" · "Đã thu" = thực thu, "Đã bỏ nợ" riêng · phiếu hoàn tiền |
+| `audit` | Trang Nhật ký thao tác + mục Lịch sử trong phiếu / hợp đồng / người thuê (chỉ chủ trọ) |
+| `imports` | Tab Nhập Excel của khu: tải mẫu → xem trước → sửa trên lưới → lưu phần hợp lệ (phòng; người thuê đang ở) — chỉ chủ trọ |
 
 ## Layout
 
@@ -120,3 +131,15 @@ Các trường hợp phiên đã xử lý:
   Câu thông báo chung: `getErrorMessage(error)`.
 - Cập nhật có `version`: gửi lại nguyên `version` đã GET; `409 CONCURRENCY_CONFLICT` → báo và tải lại.
 - React Query không retry lỗi 4xx/429.
+
+## Thông báo và xác nhận
+
+- Kết quả mọi thao tác (thành công, thất bại, cảnh báo không chặn) hiện bằng **thông báo nổi ở góc trên bên phải** (`useToast`). Lỗi theo ô vẫn hiện dưới ô đó.
+  `useForm`, `ConfirmDialog`, `useAction` đã tự báo lỗi — màn hình mới chỉ cần gọi `toast.success` khi xong.
+- Câu hỏi cần người dùng quyết định (xóa, hủy, chốt, gỡ, bỏ nợ…) luôn dùng hộp thoại `ConfirmDialog` / `FormDialog`, không dùng `window.confirm`.
+- Quyền riêng từng người đọc từ `GET /me`: `canWriteOff` (bỏ nợ), `canViewSensitiveData` (xem số giấy tờ) — xem `features/auth/permissions.js`.
+
+## Danh mục tỉnh / xã
+
+`src/data/vnAdminUnits.json` — 34 tỉnh / thành phố và 3.321 xã / phường / đặc khu, lấy từ Cục Thống kê (`danhmuchanhchinh.nso.gov.vn`, ngày ghi trong trường `asOf`).
+Backend chưa có API danh mục; file được tải khi cần (chunk riêng) qua `useAdminUnits()` và dùng trong ô chọn địa chỉ khu trọ, nơi thường trú của người thuê.

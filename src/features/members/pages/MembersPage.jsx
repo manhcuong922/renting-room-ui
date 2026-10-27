@@ -12,6 +12,8 @@ import {
   PageHeader,
   QueryView,
   StatusBadge,
+  TabPanel,
+  Tabs,
   TempPasswordDialog,
   Toolbar,
 } from '@/components/ui'
@@ -20,8 +22,12 @@ import { Can } from '@/features/auth/access'
 import { usePermission } from '@/features/auth/AuthContext'
 import { Permission } from '@/features/auth/permissions'
 import { useAction } from '@/hooks/useAction'
+import { useTabParam } from '@/hooks/useTabParam'
 import { formatDateTime } from '@/lib/format'
+import { LoginEventsTab } from '../components/LoginEventsTab'
 import { MemberFormDialog } from '../components/MemberFormDialog'
+
+const TAB_PREFIX = 'members'
 
 const isPast = (iso) => Boolean(iso) && Date.parse(iso) <= Date.now()
 
@@ -42,6 +48,9 @@ export default function MembersPage() {
   const [confirm, setConfirm] = useState(null) // { type: 'lock'|'remove', member }
   const [tempPassword, setTempPassword] = useState(null)
   const canManage = usePermission(Permission.MembersManage)
+  // Nhật ký đăng nhập: chỉ chủ trọ (phó quản lý → 403) — ẩn hẳn tab.
+  const [tabParam, setTab] = useTabParam('list')
+  const tab = canManage ? tabParam : 'list'
 
   const query = useQuery({
     queryKey: queryKeys.members.list({ includeRemoved }),
@@ -59,21 +68,32 @@ export default function MembersPage() {
     success: (_, { allowed }) => (allowed ? 'Đã cấp quyền xem số giấy tờ.' : 'Đã thu hồi quyền xem số giấy tờ.'),
   })
 
-  // Quyền xem / xuất số giấy tờ đầy đủ: chủ trọ luôn có; phó quản lý do chủ trọ bật / tắt (members.md#quyền-xem-dữ-liệu-nhạy-cảm).
-  const sensitiveCell = (m) => {
+  const writeOff = useAction({
+    mutationFn: ({ id, allowed }) => membersApi.setWriteOffPermission(id, allowed),
+    invalidate,
+    success: (_, { allowed }) => (allowed ? 'Đã cấp quyền bỏ nợ.' : 'Đã thu hồi quyền bỏ nợ.'),
+  })
+
+  // Công tắc quyền riêng của phó quản lý: chủ trọ luôn có; người đã gỡ không còn; phó quản lý khác chỉ xem.
+  const permissionCell = (m, { field, action, onLabel }) => {
     if (m.role === 'OrgOwner') return 'Luôn có'
     if (m.status === 'Removed') return '—'
-    if (!canManage) return m.canViewSensitiveData ? 'Có' : 'Không'
-    const busy = sensitiveAccess.isPending && sensitiveAccess.variables?.id === m.id
+    if (!canManage) return m[field] ? 'Có' : 'Không'
+    const busy = action.isPending && action.variables?.id === m.id
     return (
       <CheckboxField
-        label={m.canViewSensitiveData ? 'Được xem' : 'Không'}
-        checked={Boolean(m.canViewSensitiveData)}
+        label={m[field] ? onLabel : 'Không'}
+        checked={Boolean(m[field])}
         disabled={busy}
-        onChange={(e) => sensitiveAccess.mutate({ id: m.id, allowed: e.target.checked })}
+        onChange={(e) => action.mutate({ id: m.id, allowed: e.target.checked })}
       />
     )
   }
+
+  // Quyền xem / xuất số giấy tờ đầy đủ: chủ trọ luôn có; phó quản lý do chủ trọ bật / tắt (members.md#quyền-xem-dữ-liệu-nhạy-cảm).
+  const sensitiveCell = (m) => permissionCell(m, { field: 'canViewSensitiveData', action: sensitiveAccess, onLabel: 'Được xem' })
+  // Quyền bỏ nợ: bật riêng từng người, mặc định tắt (members.md#quyền-bỏ-nợ).
+  const writeOffCell = (m) => permissionCell(m, { field: 'canWriteOff', action: writeOff, onLabel: 'Được bỏ nợ' })
 
   const columns = [
     {
@@ -99,6 +119,7 @@ export default function MembersPage() {
       ),
     },
     { key: 'sensitive', header: 'Xem số giấy tờ', cell: sensitiveCell },
+    { key: 'writeOff', header: 'Bỏ nợ', cell: writeOffCell },
     { key: 'lastLogin', header: 'Đăng nhập cuối', cell: (m) => (m.lastLoginAt ? formatDateTime(m.lastLoginAt) : 'Chưa đăng nhập') },
     {
       key: 'actions',
@@ -148,13 +169,34 @@ export default function MembersPage() {
         }
       />
 
-      <Toolbar>
-        <CheckboxField label="Hiện cả người đã gỡ" checked={includeRemoved} onChange={(e) => setIncludeRemoved(e.target.checked)} />
-      </Toolbar>
+      {canManage && (
+        <Tabs
+          tabs={[
+            { id: 'list', label: 'Thành viên' },
+            { id: 'logins', label: 'Nhật ký đăng nhập' },
+          ]}
+          value={tab}
+          onChange={setTab}
+          label="Thành viên"
+          idPrefix={TAB_PREFIX}
+        />
+      )}
 
-      <QueryView query={query} isEmpty={(d) => d.length === 0} empty={<EmptyState icon={Users} title="Chưa có thành viên" />}>
-        {(members) => <DataTable columns={columns} rows={members} caption="Thành viên tổ chức" />}
-      </QueryView>
+      <TabPanel idPrefix={TAB_PREFIX} id={tab}>
+        {tab === 'logins' ? (
+          <LoginEventsTab members={query.data ?? []} />
+        ) : (
+          <>
+            <Toolbar>
+              <CheckboxField label="Hiện cả người đã gỡ" checked={includeRemoved} onChange={(e) => setIncludeRemoved(e.target.checked)} />
+            </Toolbar>
+
+            <QueryView query={query} isEmpty={(d) => d.length === 0} empty={<EmptyState icon={Users} title="Chưa có thành viên" />}>
+              {(members) => <DataTable columns={columns} rows={members} caption="Thành viên tổ chức" />}
+            </QueryView>
+          </>
+        )}
+      </TabPanel>
 
       {editing && (
         <MemberFormDialog

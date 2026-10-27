@@ -27,7 +27,8 @@ export function MeterReadingsFields({ query, kind, readings, onChange, errors = 
       {meters.map((m) => {
         const r = readings[m.id] ?? { mode: 'custom', value: null }
         const canKeep = kind === 'handover' ? Boolean(m.latestReading) : m.latestReading?.kind === 'Final'
-        const set = (changes) => onChange({ ...readings, [m.id]: { ...r, ...changes } })
+        // Sửa số ⇒ bỏ lựa chọn "số cuối người cũ gõ nhầm" đã chọn cho số cũ.
+        const set = (changes) => onChange({ ...readings, [m.id]: { ...r, correctPreviousFinal: false, ...changes } })
         return (
           <li key={m.id} style={{ display: 'grid', gap: 'var(--space-2)' }}>
             <div>
@@ -49,7 +50,7 @@ export function MeterReadingsFields({ query, kind, readings, onChange, errors = 
             )}
             {r.mode === 'custom' && (
               <NumberField
-                label={kind === 'handover' ? 'Chỉ số nhận phòng' : 'Chỉ số cuối (ngày trả phòng)'}
+                label={kind === 'handover' ? 'Chỉ số nhận phòng' : 'Chỉ số cuối'}
                 required
                 decimals={2}
                 suffix={m.unit}

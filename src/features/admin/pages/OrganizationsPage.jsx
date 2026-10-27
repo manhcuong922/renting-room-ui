@@ -36,6 +36,8 @@ const COLUMNS = [
     ),
   },
   { key: 'contact', header: 'Liên hệ', cell: (o) => [o.contactName, o.contactPhone].filter(Boolean).join(' · ') || '—' },
+  // Không tính khu, phòng đã xóa.
+  { key: 'size', header: 'Số khu / phòng', cell: (o) => `${o.propertyCount ?? 0} khu · ${o.roomCount ?? 0} phòng` },
   { key: 'status', header: 'Trạng thái', cell: (o) => <StatusBadge map={ORGANIZATION_STATUS} value={o.status} /> },
   { key: 'createdAt', header: 'Ngày tạo', cell: (o) => formatDateTime(o.createdAt) },
 ]

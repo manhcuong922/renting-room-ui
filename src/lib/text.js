@@ -11,3 +11,14 @@ export function toFieldKey(label) {
     .replace(/^[^a-z]+/, '')
   return base.slice(0, 40)
 }
+
+// "Thành phố Hà Nội" → "thanh pho ha noi": bỏ dấu, chữ thường, gộp khoảng trắng — để tìm / so khớp không cần gõ dấu.
+export function foldText(text) {
+  return String(text ?? '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[đĐ]/g, 'd')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim()
+}

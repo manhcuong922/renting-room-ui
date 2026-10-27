@@ -1,4 +1,4 @@
-import { Building, DoorOpen, FileStack, FileText, LayoutDashboard, Settings, ShieldCheck, UserCog, Users } from 'lucide-react'
+import { Building, CirclePlus, ScrollText, DoorOpen, FileStack, FileText, Gauge, LayoutDashboard, ReceiptText, Settings, ShieldCheck, UserCog, Users } from 'lucide-react'
 import { Role } from '@/constants/enums'
 import { hasPermission, Permission } from '@/features/auth/permissions'
 
@@ -29,11 +29,21 @@ export const NAVIGATION = [
     ],
   },
   {
+    id: 'monthly',
+    label: 'Hằng tháng',
+    items: [
+      { to: '/meter-readings', label: 'Ghi chỉ số', icon: Gauge, permission: Permission.BillingView },
+      { to: '/invoices', label: 'Phiếu tiền phòng', icon: ReceiptText, permission: Permission.BillingView },
+      { to: '/room-charges', label: 'Khoản phát sinh', icon: CirclePlus, permission: Permission.BillingView },
+    ],
+  },
+  {
     id: 'organization',
     label: 'Tổ chức',
     items: [
       { to: '/members', label: 'Thành viên', icon: UserCog, permission: Permission.MembersView },
       { to: '/organization', label: 'Cài đặt tổ chức', icon: Settings, permission: Permission.OrganizationSettingsView },
+      { to: '/audit-logs', label: 'Nhật ký thao tác', icon: ScrollText, permission: Permission.AuditView },
     ],
   },
   {

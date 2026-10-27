@@ -95,6 +95,8 @@ export function getErrorMessage(error) {
       : 'Đã có lỗi xảy ra.'
   }
   if (error.status === 403 && error.code === 'FORBIDDEN') return 'Bạn không có quyền thực hiện thao tác này.'
+  if (error.code === 'WRITE_OFF_NOT_ALLOWED') return 'Bạn chưa được cấp quyền bỏ nợ — cần chủ trọ cấp quyền.'
+  if (error.code === 'PROFILE_MANAGED_BY_OWNER') return 'Phó quản lý không tự sửa hồ sơ — liên hệ chủ trọ để đổi thông tin.'
   if (error.code === 'SENSITIVE_DATA_FORBIDDEN') return 'Bạn chưa được cấp quyền xem số giấy tờ đầy đủ — cần chủ trọ cấp quyền.'
   if (error.status === 404 && !error.detail) return 'Không tìm thấy dữ liệu.'
   if (error.status === 413) return 'Dữ liệu quá lớn.'

@@ -1,3 +1,4 @@
+import { DepositSection } from './DepositSection'
 import { useQuery } from '@tanstack/react-query'
 import { Pencil, Plus } from 'lucide-react'
 import { Link } from 'react-router'
@@ -48,7 +49,7 @@ export function ContractWarnings({ contract: c, onSignedDocument }) {
   )
 }
 
-export function OverviewTab({ contract: c, actions, onEditNote, onSignedDocument }) {
+export function OverviewTab({ contract: c, actions, onEditNote, onSignedDocument, onDone }) {
   return (
     <>
       {c.warnings?.length > 0 && (
@@ -64,14 +65,20 @@ export function OverviewTab({ contract: c, actions, onEditNote, onSignedDocument
             { label: 'Ngày ký · nơi ký', value: [c.signedDate && formatDate(c.signedDate), c.signedPlace].filter(Boolean).join(' · ') || 'Chốt khi kích hoạt' },
             { label: 'Ngày hiệu lực', value: c.effectiveDate ? formatDate(c.effectiveDate) : null },
             { label: 'Giá thuê hiện tại', value: formatMoney(c.currentRent) },
-            { label: 'Tiền cọc', value: c.depositAmount ? formatMoney(c.depositAmount) : 'Không cọc' },
-            { label: 'Cọc đang giữ', value: formatMoney(c.depositHeld), hidden: !c.depositHeld },
-            { label: 'Điều kiện hoàn cọc', value: c.depositTerms, full: true },
             {
-              label: 'Ở tiếp chưa ký lại',
-              value: c.holdoverSince ? `Từ ${formatDate(c.holdoverSince)}${c.holdoverNote ? ` — ${c.holdoverNote}` : ''}` : null,
+              // "Ở tiếp" = hợp đồng chuyển hẳn sang không thời hạn; hạn cũ giữ ở previousEndDate.
+              label: 'Ở tiếp',
+              value: c.holdoverSince
+                ? `Không thời hạn — ở tiếp từ ${formatDate(c.holdoverSince)}${c.previousEndDate ? `, hạn cũ ${formatDate(c.previousEndDate)}` : ''}${c.holdoverNote ? ` — ${c.holdoverNote}` : ''}`
+                : null,
               hidden: !c.holdoverSince,
               full: true,
+            },
+            {
+              label: 'Phòng đã ở trước đó',
+              hidden: !c.roomMoves?.length,
+              full: true,
+              value: c.roomMoves?.length ? c.roomMoves.map((m) => `${m.roomCode} (${formatDate(m.fromDate)} – ${formatDate(m.toDate)})`).join(' → ') + ` → ${c.roomCode} (từ ${formatDate(c.roomSince)})` : null,
             },
             {
               label: 'Hợp đồng trước',
@@ -81,6 +88,7 @@ export function OverviewTab({ contract: c, actions, onEditNote, onSignedDocument
           ]}
         />
       </Section>
+      <DepositSection contract={c} onDone={onDone} />
       <Section
         title="Bản hợp đồng đã ký"
         actions={

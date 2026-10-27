@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Pencil, UserX } from 'lucide-react'
+import { Archive, ArchiveRestore, Pencil, UserX } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { contractsApi, queryKeys, rentersApi } from '@/api'
@@ -18,12 +18,14 @@ import {
   StatusBadge,
 } from '@/components/ui'
 import { CONTRACT_STATUS, GENDER_LABELS, ID_DOCUMENT_TYPE_LABELS } from '@/constants/enums'
+import { AuditLogList } from '@/features/audit/components/AuditLogList'
 import { Can } from '@/features/auth/access'
 import { useCanViewSensitiveData } from '@/features/auth/AuthContext'
 import { Permission } from '@/features/auth/permissions'
 import { formatContractTerm } from '@/features/contracts/contractRules'
 import { useAction } from '@/hooks/useAction'
 import { formatDate, formatDateTime, formatMoney } from '@/lib/format'
+import { ConsentsSection } from '../components/ConsentsSection'
 import { RenterFormDialog } from '../components/RenterFormDialog'
 import { useRenter } from '../hooks'
 
@@ -90,6 +92,10 @@ export default function RenterDetailPage() {
   const canViewSensitive = useCanViewSensitiveData()
   const [editing, setEditing] = useState(false)
   const [anonymizeStep, setAnonymizeStep] = useState(0) // 0 đóng · 1 cảnh báo · 2 xác nhận
+  const [archiving, setArchiving] = useState(false)
+  const invalidate = [queryKeys.renters.all]
+  const archive = useAction({ mutationFn: () => rentersApi.archive(id), invalidate, success: 'Đã ẩn hồ sơ khỏi danh sách.', toastErrors: false })
+  const restore = useAction({ mutationFn: () => rentersApi.restore(id), invalidate, success: 'Đã hiện lại hồ sơ.' })
   const contracts = useQuery({
     queryKey: queryKeys.contracts.list({ renterId: id, pageSize: 50 }),
     queryFn: ({ signal }) => contractsApi.list({ renterId: id, page: 1, pageSize: 50 }, { signal }),
@@ -106,7 +112,12 @@ export default function RenterDetailPage() {
               backTo="/renters"
               backLabel="Người thuê"
               title={r.fullName}
-              meta={anonymized ? <Badge>Đã ẩn danh</Badge> : null}
+              meta={
+                <>
+                  {anonymized && <Badge>Đã ẩn danh</Badge>}
+                  {r.archivedAt && <Badge tone="warning">Đã ẩn</Badge>}
+                </>
+              }
               description={anonymized ? undefined : `Sinh ${formatDate(r.dateOfBirth)} · ${GENDER_LABELS[r.gender] ?? r.gender}`}
               actions={
                 !anonymized && (
@@ -114,6 +125,15 @@ export default function RenterDetailPage() {
                     <Button variant="secondary" icon={Pencil} onClick={() => setEditing(true)}>
                       Sửa hồ sơ
                     </Button>
+                    {r.archivedAt ? (
+                      <Button variant="secondary" icon={ArchiveRestore} loading={restore.isPending} onClick={() => restore.mutate()}>
+                        Hiện lại
+                      </Button>
+                    ) : (
+                      <Button variant="ghost" icon={Archive} onClick={() => setArchiving(true)}>
+                        Ẩn hồ sơ
+                      </Button>
+                    )}
                     <Can permission={Permission.RentersAnonymize}>
                       <Button variant="ghost" icon={UserX} onClick={() => setAnonymizeStep(1)}>
                         Ẩn danh
@@ -158,6 +178,22 @@ export default function RenterDetailPage() {
               </div>
             </Section>
 
+            <ConsentsSection renter={r} />
+
+            <Can permission={Permission.AuditView}>
+              <Section title="Lịch sử thay đổi" description="Ai đã sửa hồ sơ, ai đã xem số giấy tờ đầy đủ — chỉ chủ trọ xem được.">
+                <AuditLogList filter={{ entityType: 'Renter', entityId: r.id }} showEntity={false} emptyTitle="Chưa có thay đổi nào được ghi" />
+              </Section>
+            </Can>
+
+            <ConfirmDialog
+              open={archiving}
+              onClose={() => setArchiving(false)}
+              title={`Ẩn hồ sơ ${r.fullName}?`}
+              message="Hồ sơ không còn hiện trong danh sách và ô chọn người thuê, nhưng dữ liệu vẫn giữ nguyên (khác với Ẩn danh) và hiện lại được. Không ẩn được người đang có hợp đồng chưa kết thúc."
+              confirmLabel="Ẩn hồ sơ"
+              onConfirm={() => archive.mutateAsync()}
+            />
             {editing && <RenterFormDialog renter={r} onClose={() => setEditing(false)} />}
             {!anonymized && <AnonymizeDialogs renter={r} step={anonymizeStep} setStep={setAnonymizeStep} />}
           </>

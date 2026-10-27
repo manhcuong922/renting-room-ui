@@ -1,6 +1,6 @@
 import { KeyRound, User } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { Alert, Button, TextField } from '@/components/ui'
+import { Alert, Button, TextField, useToast } from '@/components/ui'
 import { getErrorMessage } from '@/lib/http/ApiError'
 import { useAuth } from '../AuthContext'
 import styles from './AuthPages.module.css'
@@ -26,6 +26,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
+  const toast = useToast()
   const [cooldown, setCooldown] = useState(0)
 
   // 429: khóa nút trong Retry-After giây.
@@ -46,6 +47,7 @@ export default function LoginPage() {
       // GuestOnly tự điều hướng khi đã đăng nhập.
     } catch (err) {
       setError(err)
+      toast.error(getErrorMessage(err))
       if (err.status === 429) setCooldown(err.retryAfter ?? 60)
       setSubmitting(false)
     }

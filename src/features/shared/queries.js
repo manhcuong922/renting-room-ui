@@ -51,10 +51,11 @@ export function usePropertyFees(propertyId, { includeArchived = false } = {}) {
 }
 
 /** Công tơ đang hoạt động của phòng kèm chỉ số mới nhất (meters.md) — dùng cho chỉ số nhận phòng / chỉ số cuối. */
-export function useRoomMeters(roomId, { enabled = true } = {}) {
+export function useRoomMeters(roomId, { enabled = true, includeRemoved = false } = {}) {
+  const params = { includeRemoved: includeRemoved || undefined }
   return useQuery({
-    queryKey: queryKeys.rooms.meters(roomId),
-    queryFn: ({ signal }) => metersApi.listByRoom(roomId, undefined, { signal }),
+    queryKey: queryKeys.rooms.meters(roomId, includeRemoved ? params : undefined),
+    queryFn: ({ signal }) => metersApi.listByRoom(roomId, params, { signal }),
     enabled: Boolean(roomId) && enabled,
   })
 }

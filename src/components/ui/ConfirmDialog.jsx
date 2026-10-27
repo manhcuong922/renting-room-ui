@@ -4,12 +4,13 @@ import { Button } from './Button'
 import { Alert } from './Feedback'
 import { TextAreaField, TextField } from './Fields'
 import { Modal } from './Modal'
+import { useToast } from './toastContext'
 
 /**
  * Hộp xác nhận thao tác.
  *  - `reasonLabel` → ô lý do/ghi chú, onConfirm(reason) (VD tạm ngưng tổ chức). `reasonRequired={false}` → không bắt buộc.
  *  - `confirmText` → xác nhận mạnh: phải gõ đúng chuỗi (VD gỡ thành viên — không hoàn tác).
- * onConfirm trả promise; lỗi hiện ngay trong hộp thoại, thành công thì tự đóng.
+ * onConfirm trả promise; lỗi hiện trong hộp thoại và bằng thông báo nổi, thành công thì tự đóng.
  */
 export function ConfirmDialog({
   open,
@@ -30,6 +31,7 @@ export function ConfirmDialog({
   const [typed, setTyped] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
+  const toast = useToast()
 
   const close = () => {
     if (busy) return
@@ -56,6 +58,7 @@ export function ConfirmDialog({
     } catch (err) {
       setBusy(false)
       setError(getErrorMessage(err))
+      toast.error(getErrorMessage(err))
     }
   }
 

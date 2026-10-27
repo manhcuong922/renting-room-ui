@@ -21,8 +21,14 @@ import { AMENITY_LABELS, CONTRACT_STATUS, ROOM_STATUS } from '@/constants/enums'
 import { useAction } from '@/hooks/useAction'
 import { ContractFlagBadges } from '@/features/contracts/components/ContractBadges'
 import { formatContractTerm } from '@/features/contracts/contractRules'
+import { RoomInvoicesSection } from '@/features/invoices/components/RoomInvoicesSection'
+import { RoomMetersSection } from '@/features/meters/components/RoomMetersSection'
+import { ContractBalanceDialog } from '@/features/payments/components/ContractBalanceDialog'
+import { PaymentHistory } from '@/features/payments/components/PaymentHistory'
+import { RoomChargesSection } from '@/features/room-charges/components/RoomChargesSection'
 import { formatMoney } from '@/lib/format'
 import { RoomFormDialog } from '../components/RoomFormDialog'
+import { TenancyHistorySection } from '../components/TenancyHistorySection'
 import { RoomDebt } from '../components/RoomGrid'
 import { useRoom } from '../hooks'
 import { formatOccupants } from '../roomForm'
@@ -118,9 +124,14 @@ export default function RoomDetailPage() {
               <Section
                 title="Hợp đồng hiện hành"
                 actions={
-                  <ButtonLink to={`/contracts/${current.id}`} variant="secondary" size="sm">
-                    Xem hợp đồng
-                  </ButtonLink>
+                  <>
+                    <Button size="sm" variant={room.outstandingAmount > 0 ? 'primary' : 'secondary'} onClick={() => setDialog('balance')}>
+                      {room.outstandingAmount > 0 ? 'Thu tiền' : 'Số nợ hợp đồng'}
+                    </Button>
+                    <ButtonLink to={`/contracts/${current.id}`} variant="secondary" size="sm">
+                      Xem hợp đồng
+                    </ButtonLink>
+                  </>
                 }
               >
                 <DescriptionList
@@ -161,6 +172,18 @@ export default function RoomDetailPage() {
               />
             </Section>
 
+            <RoomMetersSection room={room} />
+
+            <RoomInvoicesSection roomId={room.id} />
+
+            <RoomChargesSection room={room} />
+
+            <Section title="Lịch sử thu" description="Phiếu thu của mọi hợp đồng từng ở phòng này.">
+              <PaymentHistory filter={{ roomId: room.id }} emptyTitle="Phòng chưa có lần thu nào" />
+            </Section>
+
+            <TenancyHistorySection roomId={room.id} />
+
             <Section title="Lịch sử hợp đồng" padded={false}>
               <div style={{ padding: '0 var(--space-4) var(--space-4)' }}>
                 <QueryView query={contracts} isEmpty={(d) => d.items.length === 0} empty={<EmptyState title="Phòng chưa có hợp đồng" />}>
@@ -170,6 +193,7 @@ export default function RoomDetailPage() {
             </Section>
 
             {dialog === 'edit' && <RoomFormDialog open room={room} onClose={() => setDialog(null)} />}
+            {dialog === 'balance' && current && <ContractBalanceDialog contractId={current.id} onClose={() => setDialog(null)} />}
             <ConfirmDialog
               open={dialog === 'maintenance'}
               onClose={() => setDialog(null)}

@@ -7,8 +7,9 @@ export function ContractBadges({ contract, showDeposit = true }) {
   return (
     <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 4 }}>
       <StatusBadge map={CONTRACT_STATUS} value={contract.status} />
-      {contract.isOverdue && !flags.includes('ExpiredAwaitingDecision') && !flags.includes('Holdover') && <Badge tone="danger">Quá hạn</Badge>}
+      {contract.isOverdue && !flags.includes('ExpiredAwaitingDecision') && <Badge tone="danger">Quá hạn</Badge>}
       {showDeposit && contract.depositAmount === 0 && <Badge tone="warning">Không cọc</Badge>}
+      {contract.deposit?.notRefundedReminder && <Badge tone="danger">Chưa hoàn cọc</Badge>}
       <ContractFlagBadges flags={flags} />
     </span>
   )

@@ -1,5 +1,5 @@
 import { membersApi, queryKeys } from '@/api'
-import { Alert, Button, FormGrid, Modal, TextField } from '@/components/ui'
+import { Alert, Button, FormGrid, Modal, TextField, useToast } from '@/components/ui'
 import { useInvalidate } from '@/hooks/useAction'
 import { cleanStrings, useForm } from '@/hooks/useForm'
 import { useIdempotencyKey } from '@/hooks/useIdempotencyKey'
@@ -17,6 +17,7 @@ const toForm = (m) => ({ fullName: m?.fullName ?? '', phone: m?.phone ?? '', ema
 export function MemberFormDialog({ open, member, onClose, onCreated }) {
   const editing = Boolean(member)
   const invalidate = useInvalidate()
+  const toast = useToast()
   const idem = useIdempotencyKey()
   const form = useForm(toForm(member), {
     validate,
@@ -34,11 +35,13 @@ export function MemberFormDialog({ open, member, onClose, onCreated }) {
     if (editing) {
       await membersApi.update(member.id, { ...body, version: member.version })
       await invalidate(queryKeys.members.all)
+      toast.success('Đã lưu thông tin phó quản lý.')
       onClose()
     } else {
       const result = await membersApi.create(body, { idempotencyKey: idem.keyFor(body) })
       await invalidate(queryKeys.members.all)
       idem.reset()
+      toast.success('Đã thêm phó quản lý.')
       onCreated(result)
     }
   })

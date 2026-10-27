@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query'
 import {
+  ArrowRightLeft,
   Ban,
   CalendarClock,
   CalendarPlus,
@@ -7,6 +8,7 @@ import {
   Coins,
   FileDown,
   FileSignature,
+  HandCoins,
   Hourglass,
   Pencil,
   Play,
@@ -18,12 +20,19 @@ import {
 import { useState } from 'react'
 import { useParams } from 'react-router'
 import { contractsApi, queryKeys } from '@/api'
-import { Alert, Badge, Button, ButtonLink, ConfirmDialog, PageHeader, QueryView, TabPanel, Tabs, useToast } from '@/components/ui'
+import { Alert, Badge, Button, ButtonLink, ConfirmDialog, PageHeader, QueryView, Section, TabPanel, Tabs, useToast } from '@/components/ui'
 import { CONTRACT_TYPE_LABELS } from '@/constants/enums'
+import { AuditLogList } from '@/features/audit/components/AuditLogList'
+import { GenerateInvoicesDialog } from '@/features/invoices/components/GenerateInvoicesDialog'
+import { usePermission } from '@/features/auth/AuthContext'
+import { Permission } from '@/features/auth/permissions'
+import { ContractBalanceDialog } from '@/features/payments/components/ContractBalanceDialog'
+import { PaymentHistory } from '@/features/payments/components/PaymentHistory'
+import { useIdempotencyKey } from '@/hooks/useIdempotencyKey'
 import { useTabParam } from '@/hooks/useTabParam'
 import { saveBlob } from '@/lib/download'
 import { getErrorMessage } from '@/lib/http/ApiError'
-import { formatDate } from '@/lib/format'
+import { currentBillingMonth, formatDate } from '@/lib/format'
 import { ContractBadges } from '../components/ContractBadges'
 import { contractActions, isActiveVehicle, isCurrentOccupant } from '../contractRules'
 import { AssetsTab, VehiclesTab } from '../detail/AssetsVehiclesTabs'
@@ -41,7 +50,8 @@ import {
 } from '../detail/LifecycleDialogs'
 import { CompleteLiquidationDialog, FinalInvoiceDialog, LiquidationPanel, StartLiquidationDialog } from '../detail/LiquidationDialogs'
 import { OccupantsTab } from '../detail/OccupantsTab'
-import { useContract, useFinalInvoice } from '../hooks'
+import { TransferRoomDialog } from '../detail/TransferRoomDialog'
+import { useContract, useLiquidationPreview } from '../hooks'
 
 const TAB_PREFIX = 'contract'
 
@@ -65,12 +75,12 @@ function FlagBanners({ contract: c, actions: a, open }) {
       text: `Hợp đồng đã quá hạn (${formatDate(c.endDate)}) nhưng vẫn hiệu lực và vẫn tính kỳ thu — cần quyết định.`,
       buttons: [a.extend && ['Gia hạn', 'extend'], a.holdover && ['Cho ở tiếp, chưa ký', 'holdover'], a.startLiquidation && ['Thu lại phòng', 'liquidate']].filter(Boolean),
     })
-  if (flags.includes('Holdover'))
+  if (flags.includes('MoveOutOverdue'))
     banners.push({
-      key: 'holdover',
-      tone: 'warning',
-      text: `Đang cho ở tiếp, chưa ký lại${c.holdoverSince ? ` (từ ${formatDate(c.holdoverSince)})` : ''} — nên ký phụ lục gia hạn.`,
-      buttons: [a.extend && ['Gia hạn', 'extend'], a.startLiquidation && ['Thu lại phòng', 'liquidate']].filter(Boolean),
+      key: 'moveOutOverdue',
+      tone: 'danger',
+      text: `Quá ngày trả phòng ${formatDate(c.plannedMoveOutDate)} mà chưa thanh lý — kỳ cuối chưa tính tiền, hóa đơn tháng đang bị bỏ qua.`,
+      buttons: [a.startLiquidation && ['Thanh lý', 'liquidate'], a.withdrawNotice && ['Rút báo trả phòng (ở tiếp)', 'withdrawNotice']].filter(Boolean),
     })
   if (banners.length === 0) return null
   return banners.map((b) => (
@@ -87,15 +97,24 @@ function FlagBanners({ contract: c, actions: a, open }) {
   ))
 }
 
-function StatusBanners({ contract: c, actions: a }) {
+function StatusBanners({ contract: c, actions: a, open }) {
   const flags = c.flags ?? []
   return (
     <>
-      {c.isOverdue && !flags.includes('ExpiredAwaitingDecision') && !flags.includes('Holdover') && (
+      {c.isOverdue && !flags.includes('ExpiredAwaitingDecision') && (
         <Alert>Hợp đồng đã quá hạn ({formatDate(c.endDate)}) nhưng vẫn hiệu lực và vẫn tính kỳ thu — gia hạn hoặc thanh lý.</Alert>
       )}
-      {c.status === 'Active' && c.plannedMoveOutDate && (
-        <Alert tone="warning">Đã báo trả phòng ngày {formatDate(c.plannedMoveOutDate)}. Đến ngày trả phòng → bấm “Thanh lý”.</Alert>
+      {c.status === 'Active' && c.plannedMoveOutDate && !flags.includes('MoveOutOverdue') && (
+        <Alert tone="warning">
+          <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+            Đã báo trả phòng ngày {formatDate(c.plannedMoveOutDate)} — từ kỳ đó không lập hóa đơn tháng. Đến ngày trả phòng → bấm “Thanh lý”.
+            {a.withdrawNotice && (
+              <Button size="sm" variant="secondary" onClick={() => open('withdrawNotice')}>
+                Rút báo trả phòng
+              </Button>
+            )}
+          </span>
+        </Alert>
       )}
       {c.status === 'Liquidating' && !a.canCompleteToday && <Alert tone="warning">Đang thanh lý — hoàn tất được từ {formatDate(c.actualEndDate)}.</Alert>}
       {c.status === 'Draft' && (
@@ -114,8 +133,16 @@ export default function ContractDetailPage() {
   const [tab, setTab] = useTabParam('overview')
   const [dialog, setDialog] = useState(null)
   const [downloading, setDownloading] = useState(false)
+  const transferBackIdem = useIdempotencyKey()
+  const canViewAudit = usePermission(Permission.AuditView)
   const contract = query.data
-  const finalInvoice = useFinalInvoice(contract ?? { id }, { enabled: contract?.status === 'Liquidating' })
+  const preview = useLiquidationPreview(id, { enabled: contract?.status === 'Liquidating' })
+  // Hóa đơn trả phòng: bắt buộc khi còn phần chưa thu (finalInvoiceRequired), không thì lập tùy chọn với số cuối = số chốt kỳ.
+  const [finalInvoiceRequired, setFinalInvoiceRequired] = useState(true)
+  const openFinalInvoice = (required) => {
+    setFinalInvoiceRequired(required)
+    setDialog('finalInvoice')
+  }
 
   // Mọi thao tác: tải lại hợp đồng + danh sách + trạng thái phòng + kỳ thu + phiếu.
   const refresh = () =>
@@ -129,14 +156,17 @@ export default function ContractDetailPage() {
     if (message) toast.success(message)
   }
   // Lỗi "dữ liệu cũ" (CONTRACT_NOT_DRAFT…) → vẫn tải lại để nút khớp trạng thái mới.
+  // Lệnh trả { warnings } (hủy nháp ký lại, hủy thanh lý: VEHICLE_NOT_RESTORED) → hiện từng cảnh báo.
   const runAction = async (fn, message) => {
+    let result
     try {
-      await fn()
-      await done(message)
+      result = await fn()
     } catch (error) {
       void refresh()
       throw error
     }
+    await done(message)
+    result?.warnings?.forEach((w) => toast.warning(w.message, { duration: 12_000 }))
   }
 
   const download = async (c) => {
@@ -166,13 +196,15 @@ export default function ContractDetailPage() {
           { id: 'billing', label: 'Kỳ thu' },
           { id: 'rules', label: 'Nội quy' },
           { id: 'document', label: 'Văn bản' },
+          { id: 'payments', label: 'Thu tiền' },
+          // Nhật ký thao tác: chỉ chủ trọ (phó quản lý → 403).
+          { id: 'history', label: 'Lịch sử', hidden: !canViewAudit },
         ]
         const props = { contract: c, actions: a, refresh }
-        const invoice = finalInvoice.data
-        const canComplete = a.canCompleteToday && invoice?.status === 'Finalized'
-        let completeTitle
-        if (!a.canCompleteToday) completeTitle = `Hoàn tất được từ ${formatDate(c.actualEndDate)}`
-        else if (invoice?.status !== 'Finalized') completeTitle = 'Cần phiếu quyết toán đã chốt'
+        // Hoàn tất: bật theo `canComplete` của xem trước thanh lý (blockers rỗng).
+        const canComplete = Boolean(preview.data?.canComplete)
+        const needsFinalInvoice = Boolean(preview.data?.finalInvoiceRequired) && !preview.data?.finalInvoiceId
+        const completeTitle = canComplete ? undefined : 'Xem mục “Trả phòng” để biết còn phải làm gì'
 
         return (
           <>
@@ -224,6 +256,21 @@ export default function ContractDetailPage() {
                       Báo trả phòng
                     </Button>
                   )}
+                  {a.collect && (
+                    <Button variant="secondary" icon={HandCoins} onClick={() => setDialog('balance')}>
+                      Thu tiền
+                    </Button>
+                  )}
+                  {a.transferRoom && (
+                    <Button variant="secondary" icon={ArrowRightLeft} onClick={() => setDialog('transfer')}>
+                      Chuyển phòng
+                    </Button>
+                  )}
+                  {a.transferBack && (
+                    <Button variant="secondary" icon={Undo2} onClick={() => setDialog('transferBack')}>
+                      Chuyển lại về phòng {c.roomMoves.at(-1).roomCode}
+                    </Button>
+                  )}
                   {a.reSign && (
                     <Button variant="ghost" icon={UserRoundPen} onClick={() => setDialog('resign')}>
                       Ký lại
@@ -234,9 +281,9 @@ export default function ContractDetailPage() {
                       Thanh lý
                     </Button>
                   )}
-                  {a.finalInvoice && finalInvoice.isSuccess && !invoice && (
-                    <Button variant="secondary" icon={Receipt} onClick={() => setDialog('finalInvoice')}>
-                      Lập phiếu quyết toán
+                  {a.finalInvoice && preview.isSuccess && needsFinalInvoice && (
+                    <Button variant="secondary" icon={Receipt} onClick={() => openFinalInvoice(true)}>
+                      Lập hóa đơn trả phòng
                     </Button>
                   )}
                   {a.completeLiquidation && (
@@ -265,15 +312,21 @@ export default function ContractDetailPage() {
 
             <div style={{ display: 'grid', gap: 'var(--space-3)', marginBottom: 'var(--space-4)' }}>
               <FlagBanners contract={c} actions={a} open={setDialog} />
-              <StatusBanners contract={c} actions={a} />
+              <StatusBanners contract={c} actions={a} open={setDialog} />
+              {a.transferBack && (
+                <Alert tone="info">
+                  Hôm nay hợp đồng vừa chuyển từ phòng {c.roomMoves.at(-1).roomCode} sang {c.roomCode}. Chuyển nhầm thì bấm “Chuyển lại về phòng {c.roomMoves.at(-1).roomCode}” — hoàn lại như
+                  chưa chuyển; muốn sang phòng khác thì chuyển lại trước rồi mới chuyển tiếp. Từ ngày mai, quay về phòng cũ là một lần chuyển phòng mới.
+                </Alert>
+              )}
               {c.status === 'Liquidating' && (
-                <LiquidationPanel contract={c} finalInvoice={finalInvoice} onCreateFinalInvoice={() => setDialog('finalInvoice')} />
+                <LiquidationPanel contract={c} preview={preview} onCreateFinalInvoice={openFinalInvoice} />
               )}
             </div>
 
             <Tabs tabs={tabs} value={tab} onChange={setTab} label="Thông tin hợp đồng" idPrefix={TAB_PREFIX} />
             <TabPanel idPrefix={TAB_PREFIX} id={tab}>
-              {tab === 'overview' && <OverviewTab {...props} onEditNote={() => setDialog('note')} onSignedDocument={() => setDialog('signed')} />}
+              {tab === 'overview' && <OverviewTab {...props} onDone={done} onEditNote={() => setDialog('note')} onSignedDocument={() => setDialog('signed')} />}
               {tab === 'parties' && <PartiesTab {...props} />}
               {tab === 'occupants' && <OccupantsTab {...props} />}
               {tab === 'rent' && <RentTermsTab {...props} onAdd={() => setDialog('rent')} />}
@@ -283,6 +336,26 @@ export default function ContractDetailPage() {
               {tab === 'billing' && <BillingTab {...props} />}
               {tab === 'rules' && <RulesTab {...props} />}
               {tab === 'document' && <DocumentTab {...props} />}
+              {tab === 'payments' && (
+                <Section
+                  title="Lịch sử thu"
+                  description="Phiếu thu và bỏ nợ của hợp đồng. Nhập sai thì đảo rồi ghi lại."
+                  actions={
+                    c.status === 'Active' && (
+                      <Button size="sm" variant="secondary" icon={Receipt} onClick={() => setDialog('generate')}>
+                        Tạo phiếu tháng cho hợp đồng này
+                      </Button>
+                    )
+                  }
+                >
+                  <PaymentHistory filter={{ contractId: c.id }} emptyTitle="Hợp đồng chưa có lần thu nào" />
+                </Section>
+              )}
+              {tab === 'history' && canViewAudit && (
+                <Section title="Lịch sử thay đổi" description="Ai đã tạo, sửa, kích hoạt, thanh lý hợp đồng này.">
+                  <AuditLogList filter={{ entityType: 'Contract', entityId: c.id }} showEntity={false} emptyTitle="Chưa có thay đổi nào được ghi" />
+                </Section>
+              )}
             </TabPanel>
 
             {dialog === 'activate' && <ActivateDialog contract={c} onClose={() => setDialog(null)} onDone={refresh} />}
@@ -293,9 +366,43 @@ export default function ContractDetailPage() {
             {dialog === 'signed' && <SignedDocumentDialog contract={c} onClose={() => setDialog(null)} onDone={done} />}
             {dialog === 'notice' && <NoticeDialog contract={c} onClose={() => setDialog(null)} onDone={done} />}
             {dialog === 'liquidate' && <StartLiquidationDialog contract={c} onClose={() => setDialog(null)} onDone={done} />}
-            {dialog === 'finalInvoice' && <FinalInvoiceDialog contract={c} onClose={() => setDialog(null)} onDone={refresh} />}
-            {dialog === 'complete' && <CompleteLiquidationDialog contract={c} onClose={() => setDialog(null)} onDone={refresh} />}
+            {dialog === 'finalInvoice' && <FinalInvoiceDialog contract={c} required={finalInvoiceRequired} onClose={() => setDialog(null)} onDone={refresh} />}
+            {dialog === 'complete' && <CompleteLiquidationDialog contract={c} preview={preview.data} onClose={() => setDialog(null)} onDone={refresh} />}
+            {dialog === 'generate' && <GenerateInvoicesDialog contract={c} defaultMonth={currentBillingMonth()} onClose={() => setDialog(null)} />}
+            {dialog === 'balance' && <ContractBalanceDialog contractId={c.id} onClose={() => setDialog(null)} />}
+            {dialog === 'transfer' && <TransferRoomDialog contract={c} onClose={() => setDialog(null)} onDone={done} />}
+            <ConfirmDialog
+              open={dialog === 'transferBack'}
+              onClose={() => setDialog(null)}
+              title={`Chuyển lại về phòng ${c.roomMoves?.at(-1)?.roomCode ?? 'cũ'}?`}
+              message={`Hoàn lại lần chuyển hôm nay như chưa từng chuyển: hợp đồng về phòng ${c.roomMoves?.at(-1)?.roomCode ?? 'cũ'}, giá thuê và dịch vụ trở lại như trước, chỉ số lúc chuyển và khoản chênh lệch tiền phòng của lần chuyển bị hủy. Bị chặn nếu phòng cũ đã có hợp đồng khác, phòng ${c.roomCode} đã lập phiếu, hoặc khoản chênh lệch đã đánh dấu đã thu.`}
+              confirmLabel="Chuyển lại"
+              tone="danger"
+              onConfirm={async () => {
+                // Chuyển lại trong ngày = gọi lại lệnh chuyển phòng với phòng vừa rời; server bỏ qua các trường khác (contracts.md#chuyển-phòng).
+                const body = { toRoomId: c.roomMoves.at(-1).roomId }
+                let result
+                try {
+                  result = await contractsApi.transferRoom(c.id, body, { idempotencyKey: transferBackIdem.keyFor(body) })
+                  transferBackIdem.reset()
+                } catch (error) {
+                  void refresh()
+                  throw error
+                }
+                await done(`Đã chuyển lại về phòng ${c.roomMoves.at(-1).roomCode}.`)
+                // Cảnh báo không chặn: phần không hoàn nguyên được → nhắc kiểm tra giá thuê / dịch vụ.
+                result?.warnings?.forEach((w) => toast.warning(w.message, { duration: 12_000 }))
+              }}
+            />
             {dialog === 'note' && <NoteDialog contract={c} onClose={() => setDialog(null)} onDone={done} />}
+            <ConfirmDialog
+              open={dialog === 'withdrawNotice'}
+              onClose={() => setDialog(null)}
+              title="Rút báo trả phòng?"
+              message={`Người thuê ở tiếp: bỏ ngày dự kiến trả ${formatDate(c.plannedMoveOutDate)}. Sau đó tạo hóa đơn tháng như thường — các kỳ đã bị bỏ qua lập lại lần lượt.`}
+              confirmLabel="Rút báo trả phòng"
+              onConfirm={() => runAction(() => contractsApi.withdrawNotice(c.id), 'Đã rút báo trả phòng.')}
+            />
             <ConfirmDialog
               open={dialog === 'cancel'}
               onClose={() => setDialog(null)}
@@ -310,7 +417,7 @@ export default function ContractDetailPage() {
               open={dialog === 'cancelLiquidation'}
               onClose={() => setDialog(null)}
               title="Hủy thanh lý?"
-              message="Hợp đồng quay lại “Đang hiệu lực”; phiếu quyết toán nháp bị xóa, chỉ số cuối bị hủy. Bị chặn nếu phòng đã có hợp đồng mới, người ở đã sang phòng khác, hoặc phiếu quyết toán đã chốt (hủy phiếu đó trước)."
+              message="Hợp đồng quay lại “Đang hiệu lực” và bỏ luôn ngày báo trả phòng (người thuê ở lại); hóa đơn trả phòng nháp bị xóa, chỉ số cuối bị hủy. Thanh lý để ký lại ⇒ cọc về Đang giữ, xe mở lại. Bị chặn nếu phòng đã có hợp đồng mới, người ở đã sang phòng khác, hoặc hóa đơn trả phòng đã chốt (hủy hóa đơn đó trước)."
               confirmLabel="Hủy thanh lý"
               onConfirm={() => runAction(() => contractsApi.cancelLiquidation(c.id), 'Đã hủy thanh lý.')}
             />

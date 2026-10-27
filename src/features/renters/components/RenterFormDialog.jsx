@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { queryKeys, rentersApi } from '@/api'
-import { Alert, Button, DateField, FormGrid, FormSection, Modal, SelectField, TextAreaField, TextField } from '@/components/ui'
+import { Alert, Button, DateField, FormGrid, FormSection, Modal, SelectField, TextAreaField, TextField, useToast } from '@/components/ui'
 import { GENDER_LABELS, ID_DOCUMENT_TYPE_LABELS, ID_NUMBER_HINTS, toOptions } from '@/constants/enums'
 import { useInvalidate } from '@/hooks/useAction'
 import { useForm } from '@/hooks/useForm'
 import { useIdempotencyKey } from '@/hooks/useIdempotencyKey'
 import { formatDate } from '@/lib/format'
+import { PermanentAddressField } from './PermanentAddressField'
 import { ID_REQUIRED_FROM_AGE, NO_ID_DOCUMENT, makeRenterValidate, toRenterBody, toRenterForm } from '../renterForm'
 
 const ID_TYPE_OPTIONS = [
@@ -22,6 +23,7 @@ const ID_TYPE_OPTIONS = [
 export function RenterFormDialog({ renter, onClose, onSaved, onUseExisting }) {
   const editing = Boolean(renter)
   const invalidate = useInvalidate()
+  const toast = useToast()
   const idem = useIdempotencyKey()
   const [existing, setExisting] = useState(null)
   const form = useForm(toRenterForm(renter), {
@@ -40,6 +42,7 @@ export function RenterFormDialog({ renter, onClose, onSaved, onUseExisting }) {
       await invalidate(queryKeys.renters.all)
       const saved = await rentersApi.get(id)
       idem.reset()
+      toast.success(editing ? 'Đã lưu hồ sơ người thuê.' : 'Đã thêm người thuê.')
       onSaved?.(saved)
       onClose()
     } catch (error) {
@@ -127,7 +130,11 @@ export function RenterFormDialog({ renter, onClose, onSaved, onUseExisting }) {
               hint={idType === 'Passport' ? 'Hộ chiếu → thường là người nước ngoài (KR, CN…)' : 'Mã ISO 2 chữ, mặc định VN'}
               {...form.field('nationality')}
             />
-            <TextField label="Nơi thường trú" maxLength={500} hint="In vào hợp đồng" {...form.field('permanentAddress')} />
+            <PermanentAddressField
+              value={form.values.permanentAddress}
+              error={form.errors.permanentAddress}
+              onChange={(text) => form.setValue('permanentAddress', text)}
+            />
           </FormGrid>
         </FormSection>
 

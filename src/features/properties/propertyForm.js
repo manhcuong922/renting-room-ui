@@ -11,6 +11,9 @@ export function toPropertyForm(p) {
       streetAddress: p?.address?.streetAddress ?? '',
       communeName: p?.address?.communeName ?? '',
       provinceName: p?.address?.provinceName ?? '',
+      // Mã đơn vị hành chính: có khi chọn từ danh mục (src/data/vnAdminUnits.json); nhập tay → null.
+      communeCode: p?.address?.communeCode ?? null,
+      provinceCode: p?.address?.provinceCode ?? null,
     },
     description: p?.description ?? '',
     evnCustomerCode: p?.evnCustomerCode ?? '',
@@ -33,8 +36,8 @@ export function toPropertyBody(v) {
       streetAddress: v.address.streetAddress.trim(),
       communeName: v.address.communeName.trim(),
       provinceName: v.address.provinceName.trim(),
-      communeCode: null,
-      provinceCode: null,
+      communeCode: v.address.communeCode ?? null,
+      provinceCode: v.address.provinceCode ?? null,
     },
     description: str(v.description),
     evnCustomerCode: str(v.evnCustomerCode),
@@ -58,8 +61,8 @@ export function validateProperty(v, { creating }) {
     code: creating && !/^[A-Za-z0-9._/-]{1,32}$/.test(v.code.trim()) ? 'Mã ≤ 32 ký tự: chữ, số, . _ / -' : null,
     name: !v.name.trim() ? 'Nhập tên khu.' : null,
     'address.streetAddress': !v.address.streetAddress.trim() ? 'Nhập số nhà, ngõ, đường.' : null,
-    'address.communeName': !v.address.communeName.trim() ? 'Nhập xã/phường.' : null,
-    'address.provinceName': !v.address.provinceName.trim() ? 'Nhập tỉnh/thành phố.' : null,
+    'address.communeName': !v.address.communeName.trim() ? 'Chọn hoặc nhập xã / phường.' : null,
+    'address.provinceName': !v.address.provinceName.trim() ? 'Chọn hoặc nhập tỉnh / thành phố.' : null,
     ...(creating ? validateBilling(v.billing, 'billing.') : {}),
   }
 }

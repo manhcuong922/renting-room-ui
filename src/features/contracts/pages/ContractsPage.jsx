@@ -30,12 +30,15 @@ const QUICK_FILTERS = [
   { value: 'overdue', label: 'Quá hạn' },
   { value: 'noDeposit', label: 'Không cọc' },
   { value: 'missingDoc', label: 'Thiếu tài liệu' },
+  { value: 'depositNotRefunded', label: 'Chưa hoàn cọc' },
 ]
 const QUICK_QUERY = {
   expiring: { expiringWithinDays: 30 },
   overdue: { overdue: true },
   noDeposit: { hasDeposit: false },
   missingDoc: { missingSignedDocument: true },
+  // Hợp đồng đã kết thúc có cọc mà chưa đánh dấu hoàn trả.
+  depositNotRefunded: { depositNotRefunded: true },
 }
 
 const COLUMNS = [

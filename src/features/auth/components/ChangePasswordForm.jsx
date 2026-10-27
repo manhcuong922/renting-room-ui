@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Alert, Button, TextField } from '@/components/ui'
+import { Alert, Button, TextField, useToast } from '@/components/ui'
 import { getErrorMessage } from '@/lib/http/ApiError'
 import { useAuth } from '../AuthContext'
 import styles from '../pages/AuthPages.module.css'
@@ -30,6 +30,7 @@ function serverErrors(error) {
 
 export function ChangePasswordForm({ onSuccess, submitLabel = 'Đổi mật khẩu' }) {
   const { user, changePassword } = useAuth()
+  const toast = useToast()
   const [values, setValues] = useState(EMPTY)
   const [errors, setErrors] = useState({})
   const [formError, setFormError] = useState(null)
@@ -53,6 +54,7 @@ export function ChangePasswordForm({ onSuccess, submitLabel = 'Đổi mật kh�
       const fields = serverErrors(error)
       setErrors(fields)
       if (!Object.keys(fields).length) setFormError(getErrorMessage(error))
+      toast.error(Object.keys(fields).length ? 'Vui lòng kiểm tra các ô được đánh dấu.' : getErrorMessage(error))
     } finally {
       setSubmitting(false)
     }

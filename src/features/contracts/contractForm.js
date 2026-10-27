@@ -22,6 +22,8 @@ export const emptyOccupant = (renter) => ({
   relationship: '',
   guardianConsent: false,
   note: '',
+  // Resident (người ở) | CoTenant (đồng thuê — có tên trên hợp đồng, phải có số giấy tờ).
+  role: 'Resident',
 })
 
 export function emptyContractForm() {
@@ -89,6 +91,7 @@ export function draftToForm(c, renters, template) {
       relationship: o.relationship ?? '',
       guardianConsent: o.guardianConsent ?? false,
       note: o.note ?? '',
+      role: o.role ?? 'Resident',
     })),
     householdHeadRenterId: c.householdHeadRenterId ?? '',
     startDate: c.startDate,
@@ -133,6 +136,7 @@ export function buildOccupants(v) {
       relationship: str(o.relationship),
       guardianConsent: o.guardianConsent,
       note: str(o.note),
+      role: o.role ?? 'Resident',
     })
   }
   return list

@@ -62,3 +62,20 @@ export function formatBillingMonth(value) {
   const [y, m] = value.split('-')
   return `Tháng ${Number(m)}/${y}`
 }
+
+// Tháng thu hiện tại theo giờ Việt Nam, dạng yyyy-MM (khớp `billingMonth` của API).
+export function currentBillingMonth() {
+  return todayVN().slice(0, 7)
+}
+
+// Cộng tháng trên chuỗi yyyy-MM.
+export function addBillingMonths(month, delta) {
+  return addMonths(`${month}-01`, delta).slice(0, 7)
+}
+
+// "2026-10-05" → "05/10" (nhãn ngắn trên ô phòng / lưới chỉ số).
+export function formatDayMonth(value) {
+  if (!value) return '—'
+  const [, m, d] = value.split('-')
+  return `${d}/${m}`
+}

@@ -2,7 +2,7 @@ import { User } from 'lucide-react'
 import { Link } from 'react-router'
 import { CONTRACT_FLAGS, ROOM_STATUS } from '@/constants/enums'
 import { cx } from '@/lib/cx'
-import { formatMoney } from '@/lib/format'
+import { formatDayMonth, formatMoney } from '@/lib/format'
 import { formatOccupants, groupByFloor } from '../roomForm'
 import styles from './RoomGrid.module.css'
 
@@ -41,8 +41,10 @@ function RoomTile({ room, showProperty }) {
       </span>
       <span className={styles.rent}>{room.listedRent ? formatMoney(room.listedRent) : 'Chưa có giá'}</span>
       <RoomDebt room={room} />
-      {flags.length > 0 && (
+      {(flags.length > 0 || contract?.moveOutDate) && (
         <span className={styles.flags}>
+          {/* Ngày dự kiến trả đã báo / ngày trả phòng khi đang thanh lý (rooms.md) */}
+          {contract?.moveOutDate && !flags.includes('MoveOutOverdue') && <span className={cx(styles.flag, styles.flag_orange)}>Trả phòng {formatDayMonth(contract.moveOutDate)}</span>}
           {flags.map((f) => (
             <span key={f} className={cx(styles.flag, styles[`flag_${CONTRACT_FLAGS[f]?.tone ?? 'neutral'}`])}>
               {CONTRACT_FLAGS[f]?.label ?? f}

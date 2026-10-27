@@ -1,16 +1,21 @@
-import { FileSpreadsheet, IdCard, Search, UserPlus, Users } from 'lucide-react'
+import { FileSpreadsheet, History, IdCard, Search, UserPlus, Users } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { Button, DataTable, EmptyState, PageHeader, Pagination, QueryView, SelectField, TextField, Toolbar } from '@/components/ui'
+import { Badge, Button, ButtonLink, CheckboxField, DataTable, EmptyState, PageHeader, Pagination, QueryView, SelectField, TextField, Toolbar } from '@/components/ui'
 import { GENDER_LABELS, ID_DOCUMENT_TYPE_LABELS, toOptions } from '@/constants/enums'
 import { ExportRentersDialog } from '@/features/exports/ExportRentersDialog'
+import { usePropertyOptions } from '@/features/shared/queries'
 import { useListParams } from '@/hooks/useListParams'
 import { formatDate } from '@/lib/format'
 import { RenterFormDialog } from '../components/RenterFormDialog'
 import { useRenterList } from '../hooks'
 
 // Số giấy tờ KHÔNG đặt trên URL (lịch sử trình duyệt, log proxy, Referer) — giữ trong state, tìm qua POST /renters/search.
-const DEFAULTS = { q: '', page: 1 }
+const DEFAULTS = { q: '', propertyId: '', staying: '', archived: false, page: 1 }
+const STAYING_OPTIONS = [
+  { value: 'true', label: 'Đang ở' },
+  { value: 'false', label: 'Không còn ở đâu' },
+]
 
 const COLUMNS = [
   {
@@ -18,9 +23,12 @@ const COLUMNS = [
     header: 'Họ tên',
     primary: true,
     cell: (r) => (
-      <Link to={`/renters/${r.id}`}>
-        <strong>{r.fullName}</strong>
-      </Link>
+      <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+        <Link to={`/renters/${r.id}`}>
+          <strong>{r.fullName}</strong>
+        </Link>
+        {r.archivedAt && <Badge>Đã ẩn</Badge>}
+      </span>
     ),
   },
   { key: 'dob', header: 'Ngày sinh', cell: (r) => `${formatDate(r.dateOfBirth)} · ${GENDER_LABELS[r.gender] ?? ''}` },
@@ -36,10 +44,16 @@ export default function RentersPage() {
   const [idInput, setIdInput] = useState('')
   const [idSearch, setIdSearch] = useState({ idNumber: '', idType: '' })
   const [dialog, setDialog] = useState(null) // 'create' | 'export'
+  const properties = usePropertyOptions()
+  const byIdNumber = Boolean(idSearch.idNumber)
   const query = useRenterList({
     q: params.q || undefined,
     idNumber: idSearch.idNumber || undefined,
     idType: idSearch.idNumber ? idSearch.idType || undefined : undefined,
+    // Lọc theo khu / đang ở / hồ sơ đã ẩn chỉ có ở GET /renters (không áp khi tìm theo số giấy tờ).
+    propertyId: params.propertyId || undefined,
+    staying: params.staying || undefined,
+    includeArchived: params.archived || undefined,
     page: params.page,
     pageSize: 20,
   })
@@ -55,6 +69,9 @@ export default function RentersPage() {
         description="Hồ sơ người thuê và người ở cùng — dùng chung cho mọi hợp đồng của tổ chức."
         actions={
           <>
+            <ButtonLink to="/tenancy-history" variant="ghost" icon={History}>
+              Ai đã ở phòng nào
+            </ButtonLink>
             <Button variant="secondary" icon={FileSpreadsheet} onClick={() => setDialog('export')}>
               Xuất Excel
             </Button>
@@ -93,6 +110,19 @@ export default function RentersPage() {
             value={idSearch.idType}
             onChange={(e) => searchById({ idType: e.target.value })}
           />
+        )}
+        {!byIdNumber && (
+          <>
+            <SelectField
+              aria-label="Khu trọ"
+              placeholder="Mọi khu"
+              options={(properties.data ?? []).map((p) => ({ value: p.id, label: `Đang ở khu ${p.code}` }))}
+              value={params.propertyId}
+              onChange={(e) => set({ propertyId: e.target.value })}
+            />
+            <SelectField aria-label="Tình trạng ở" placeholder="Đang ở hoặc không" options={STAYING_OPTIONS} value={params.staying} onChange={(e) => set({ staying: e.target.value })} />
+            <CheckboxField label="Hiện cả hồ sơ đã ẩn" checked={params.archived} onChange={(e) => set({ archived: e.target.checked })} />
+          </>
         )}
       </Toolbar>
 

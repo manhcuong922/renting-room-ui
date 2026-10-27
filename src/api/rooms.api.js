@@ -16,6 +16,11 @@ export const roomsApi = {
   archive: (id) => http.post(`/rooms/${id}/archive`),
   restore: (id) => http.post(`/rooms/${id}/restore`),
 
+  // Lịch sử thuê của phòng — mỗi phần tử là một lần một hợp đồng ở phòng, mới nhất trước (mảng)
+  tenancyHistory: (id, options) => http.get(`/rooms/${id}/tenancy-history`, options),
+  // Tìm theo tên: ai đã ở / đứng tên phòng nào (search ≥ 2 ký tự, không phân biệt dấu) — mảng
+  searchTenancy: (query, options) => http.get('/tenancy-history', { ...options, query }),
+
   listGroups: (propertyId, options) => http.get(`/properties/${propertyId}/room-groups`, options),
   createGroup: (propertyId, body) => http.post(`/properties/${propertyId}/room-groups`, body),
   updateGroup: (groupId, body) => http.put(`/room-groups/${groupId}`, body),

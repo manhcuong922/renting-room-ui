@@ -69,26 +69,42 @@ export function ActivateDialog({ contract: c, onClose, onDone }) {
     { ok: c.occupants.some(isCurrentOccupant), label: 'Có ít nhất 1 người ở' },
   ]
 
-  const activate = async () => {
-    const clientErrors = validateReadings(meterList, currentReadings)
+  // Số nhận phòng nhỏ hơn số cuối HĐ trước (contracts.md#kích-hoạt): { meterId, previousValue, previousContractNo } → hỏi nguyên nhân.
+  const [belowFinal, setBelowFinal] = useState(null)
+
+  const activate = async (readingsToSend = currentReadings) => {
+    const clientErrors = validateReadings(meterList, readingsToSend)
     setReadingErrors(clientErrors)
     if (Object.keys(clientErrors).length) return
     setBusy(true)
     setError(null)
-    const body = { handoverReadings: toReadingInputs(meterList, currentReadings) }
+    setBelowFinal(null)
+    const body = { handoverReadings: toReadingInputs(meterList, readingsToSend) }
     try {
       await contractsApi.activate(c.id, body, { idempotencyKey: idem.keyFor(body) })
       await onDone()
       toast.success('Đã kích hoạt hợp đồng — phòng chuyển "Đang thuê".')
       onClose()
     } catch (err) {
-      setError(err)
       setReadingErrors(readingErrorsFromApi(err))
+      if (err.code === 'HANDOVER_BELOW_PREVIOUS_FINAL') {
+        setBelowFinal(err.extensions ?? {})
+        return
+      }
+      setError(err)
+      toast.error(getErrorMessage(err))
       if (err.code === 'METER_NOT_IN_ROOM') void meters.refetch()
     } finally {
       setBusy(false)
     }
   }
+  // "Số cuối người cũ gõ nhầm": gửi lại cùng số kèm correctPreviousFinal trên công tơ đó — HĐ cũ có khoản "Chênh lệch sau thanh lý".
+  const correctPreviousFinal = () => {
+    const next = { ...currentReadings, [belowFinal.meterId]: { ...currentReadings[belowFinal.meterId], correctPreviousFinal: true } }
+    setReadings(next)
+    void activate(next)
+  }
+  const belowMeter = belowFinal && meterList.find((m) => m.id === belowFinal.meterId)
 
   return (
     <Modal
@@ -103,7 +119,7 @@ export function ActivateDialog({ contract: c, onClose, onDone }) {
           <Button variant="secondary" onClick={onClose} disabled={busy}>
             Hủy
           </Button>
-          <Button onClick={activate} loading={busy} disabled={meters.isPending}>
+          <Button onClick={() => activate()} loading={busy} disabled={meters.isPending}>
             Kích hoạt
           </Button>
         </>
@@ -127,6 +143,24 @@ export function ActivateDialog({ contract: c, onClose, onDone }) {
         >
           <MeterReadingsFields query={meters} kind="handover" readings={currentReadings} onChange={setReadings} errors={readingErrors} />
         </FormSection>
+        {belowFinal && (
+          <Alert tone="warning">
+            <strong>
+              Số nhận phòng {belowMeter ? belowMeter.feeTypeName.toLowerCase() : ''} nhỏ hơn số cuối {belowFinal.previousValue ?? ''} của hợp đồng trước
+              {belowFinal.previousContractNo ? ` ${belowFinal.previousContractNo}` : ''}. Vì sao?
+            </strong>
+            <ul style={{ margin: '4px 0 0', paddingLeft: 18, display: 'grid', gap: 6 }}>
+              <li>
+                <Button size="sm" variant="secondary" onClick={correctPreviousFinal} loading={busy}>
+                  Số cuối người cũ gõ nhầm
+                </Button>{' '}
+                — sửa số cuối hợp đồng trước về số này, hóa đơn trả phòng cũ giữ nguyên, hợp đồng cũ có khoản “Chênh lệch sau thanh lý” chờ xử lý.
+              </li>
+              <li>Công tơ đã thay — đóng hộp này, dùng “Thay công tơ” ở phòng rồi kích hoạt lại.</li>
+              <li>Nhập nhầm — sửa lại số ở trên.</li>
+            </ul>
+          </Alert>
+        )}
         {error && (
           <Alert>
             {getErrorMessage(error)}
@@ -198,13 +232,21 @@ export function RentTermDialog({ contract: c, onClose, onDone }) {
 }
 
 export function ExtendDialog({ contract: c, onClose, onDone }) {
+  // Hợp đồng đang "ở tiếp" (endDate trống, holdoverSince có giá trị) vẫn gia hạn được: ngày mới phải sau hạn cũ (previousEndDate).
+  const currentEnd = c.endDate ?? c.previousEndDate
   return (
     <FormDialog
       title="Gia hạn hợp đồng"
-      description={`Ngày kết thúc hiện tại: ${formatDate(c.endDate)}. Gia hạn xóa trạng thái “ở tiếp, chưa ký lại”.`}
+      description={
+        c.endDate
+          ? `Ngày kết thúc hiện tại: ${formatDate(c.endDate)}.`
+          : `Hợp đồng đang ở tiếp, không thời hạn (hạn cũ ${formatDate(c.previousEndDate)}). Gia hạn để có hạn mới.`
+      }
       initial={{ newEndDate: '' }}
-      validate={(v) => ({ newEndDate: !v.newEndDate || v.newEndDate <= c.endDate ? 'Phải sau ngày kết thúc hiện tại.' : null })}
-      codeFields={{ INVALID_END_DATE: 'newEndDate' }}
+      validate={(v) => ({
+        newEndDate: !v.newEndDate ? 'Chọn ngày kết thúc mới.' : currentEnd && v.newEndDate <= currentEnd ? `Phải sau ${formatDate(currentEnd)}.` : null,
+      })}
+      codeFields={{ INVALID_END_DATE: 'newEndDate', CANNOT_EXTEND_INDEFINITE: 'newEndDate' }}
       submitLabel="Gia hạn"
       onSubmit={async (v) => {
         await contractsApi.extend(c.id, v)
@@ -222,14 +264,14 @@ export function HoldoverDialog({ contract: c, onClose, onDone }) {
   return (
     <FormDialog
       title="Cho ở tiếp, chưa ký lại"
-      description={`Hợp đồng hết hạn ${formatDate(c.endDate)}. Vẫn tính tiền theo điều khoản cũ, kỳ thu chạy tiếp. Luật không tự gia hạn hợp đồng hết hạn — nên ký phụ lục gia hạn sớm.`}
+      description={`Hợp đồng hết hạn ${formatDate(c.endDate)}. Bấm ghi nhận thì hợp đồng chuyển sang không thời hạn (hạn cũ vẫn được lưu), tiếp tục tính tiền theo điều khoản cũ và hết nhãn quá hạn. Muốn có hạn mới thì dùng Gia hạn.`}
       size="md"
       initial={{ note: '' }}
       codeFields={{ CONTRACT_NOT_EXPIRED: 'note', HOLDOVER_ALREADY: 'note' }}
       submitLabel="Ghi nhận ở tiếp"
       onSubmit={async (v) => {
         await contractsApi.holdover(c.id, { note: v.note.trim() || null })
-        await onDone('Đã ghi nhận cho ở tiếp.')
+        await onDone('Đã ghi nhận cho ở tiếp — hợp đồng chuyển sang không thời hạn.')
       }}
       onClose={onClose}
     >
@@ -292,11 +334,11 @@ export function ResignDialog({ contract: c, onClose, onDone }) {
               {...form.field('representativeRenterId')}
             />
             <DateField label="Ngày kết thúc HĐ mới" hint="Trống = không thời hạn" {...form.field('endDate')} />
-            {c.depositHeld > 0 && (
+            {c.deposit?.status === 'Holding' && c.deposit.amount > 0 && (
               <CheckboxField
                 className="span-full"
-                label={`Chuyển cọc đang giữ (${formatMoney(c.depositHeld)}) sang hợp đồng mới`}
-                description="Bỏ tích: cọc ở lại hợp đồng cũ, quyết toán khi hoàn tất thanh lý hợp đồng cũ."
+                label={`Chuyển cọc đang giữ (${formatMoney(c.deposit.amount)}) sang hợp đồng mới`}
+                description="Bỏ tích: cọc ở lại hợp đồng cũ, quyết định trả / không trả khi hoàn tất thanh lý hợp đồng cũ."
                 {...form.field('transferDeposit', { type: 'checkbox' })}
               />
             )}
@@ -336,7 +378,7 @@ export function NoticeDialog({ contract: c, onClose, onDone }) {
   return (
     <FormDialog
       title="Ghi nhận báo trả phòng"
-      description="Chỉ ghi nhận (hợp đồng vẫn hiệu lực). Đến ngày trả phòng → Bắt đầu thanh lý. Gửi lại để sửa ngày."
+      description="Chỉ ghi nhận (hợp đồng vẫn hiệu lực). Từ kỳ chứa ngày dự kiến trả, tạo hóa đơn tháng sẽ bỏ qua — kỳ đó lập hóa đơn trả phòng. Đến ngày trả phòng → Thanh lý. Gửi lại để sửa ngày."
       initial={{ noticeDate: c.noticeGivenDate ?? todayVN(), plannedMoveOutDate: c.plannedMoveOutDate ?? '' }}
       validate={(v) => ({
         noticeDate: !v.noticeDate ? 'Chọn ngày báo.' : null,

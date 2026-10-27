@@ -12,4 +12,11 @@ export const rentersApi = {
   revealIdNumber: (id) => http.post(`/renters/${id}/reveal-id-number`),
   // Chỉ chủ trọ, không đảo ngược.
   anonymize: (id, body) => http.post(`/renters/${id}/anonymize`, body),
+  // Ẩn hồ sơ khỏi danh sách / ô chọn (không xóa dữ liệu, khác ẩn danh) / hiện lại → 204
+  archive: (id) => http.post(`/renters/${id}/archive`),
+  restore: (id) => http.post(`/renters/${id}/restore`),
+  // Sổ ghi nhận đồng ý xử lý dữ liệu cá nhân — mảng, mới nhất trước
+  consents: (id, options) => http.get(`/renters/${id}/consents`, options),
+  addConsent: (id, body) => http.post(`/renters/${id}/consents`, body),
+  withdrawConsent: (id, consentId, withdrawnOn) => http.post(`/renters/${id}/consents/${consentId}/withdraw`, { withdrawnOn }),
 }

@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { useToast } from '@/components/ui/toastContext'
 import { ApiError, getErrorMessage } from '@/lib/http/ApiError'
 
 // Đường dẫn field dạng 'address.streetAddress' hoặc 'occupants.0.renterId'.
@@ -18,6 +19,8 @@ export function setIn(obj, path, value) {
   copy[isIndex ? Number(head) : head] = setIn(child, rest.join('.'), value)
   return copy
 }
+
+const CHECK_FIELDS_MESSAGE = 'Vui lòng kiểm tra các ô được đánh dấu.'
 
 // Key lỗi của server: 'contract.occupants[1].renterId' → bỏ tiền tố → 'occupants.1.renterId'.
 function normalizeServerKey(key, prefix) {
@@ -40,12 +43,15 @@ function normalizeServerKey(key, prefix) {
  * - validate(values) → { field: 'thông báo' } (lỗi phía client, chặn submit)
  * - serverPrefix: tiền tố key lỗi server cần bỏ (VD body bọc trong `renter`)
  * - codeFields: mã lỗi nghiệp vụ → ô hiển thị `detail` (VD ORG_CODE_TAKEN → 'code')
+ *
+ * Gửi thất bại luôn có thông báo nổi (góc trên phải); lỗi theo ô vẫn hiện dưới ô đó.
  */
 export function useForm(initialValues, { validate, serverPrefix, codeFields = {} } = {}) {
   const [values, setValues] = useState(initialValues)
   const [errors, setErrors] = useState({})
   const [formError, setFormError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
+  const toast = useToast()
 
   const setValue = useCallback((name, value) => {
     setValues((v) => setIn(v, name, value))
@@ -71,6 +77,7 @@ export function useForm(initialValues, { validate, serverPrefix, codeFields = {}
   const applyServerError = (error) => {
     if (!(error instanceof ApiError)) {
       setFormError(getErrorMessage(error))
+      toast.error(getErrorMessage(error))
       return false
     }
     const fieldErrors = {}
@@ -80,10 +87,12 @@ export function useForm(initialValues, { validate, serverPrefix, codeFields = {}
     if (codeFields[error.code]) fieldErrors[codeFields[error.code]] = error.detail ?? getErrorMessage(error)
     if (Object.keys(fieldErrors).length) {
       setErrors(fieldErrors)
-      setFormError(error.isValidation ? 'Vui lòng kiểm tra các ô được đánh dấu.' : null)
+      setFormError(error.isValidation ? CHECK_FIELDS_MESSAGE : null)
+      toast.error(error.isValidation ? CHECK_FIELDS_MESSAGE : getErrorMessage(error))
       return true
     }
     setFormError(getErrorMessage(error))
+    toast.error(getErrorMessage(error))
     return false
   }
 
@@ -94,8 +103,11 @@ export function useForm(initialValues, { validate, serverPrefix, codeFields = {}
     const clientErrors = validate?.(values) ?? {}
     const hasErrors = Object.values(clientErrors).some(Boolean)
     setErrors(hasErrors ? clientErrors : {})
-    setFormError(hasErrors ? 'Vui lòng kiểm tra các ô được đánh dấu.' : null)
-    if (hasErrors) return
+    setFormError(hasErrors ? CHECK_FIELDS_MESSAGE : null)
+    if (hasErrors) {
+      toast.error(CHECK_FIELDS_MESSAGE)
+      return
+    }
     setSubmitting(true)
     try {
       await onSubmit(values)

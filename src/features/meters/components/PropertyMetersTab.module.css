@@ -1,0 +1,45 @@
+.stack {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.saveBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.muted {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+/* Dòng bị server từ chối (rowErrors) — tô đỏ nhạt. */
+.rowError {
+  background: var(--color-danger-soft);
+}
+
+.rowMessage {
+  margin-top: 2px;
+  color: var(--color-danger);
+  font-size: var(--text-xs);
+}
+
+.totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.total {
+  display: grid;
+  gap: 2px;
+  min-width: 140px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+}

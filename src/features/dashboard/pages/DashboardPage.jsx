@@ -1,10 +1,11 @@
 import { useQueries } from '@tanstack/react-query'
-import { Building, CalendarClock, DoorOpen, TriangleAlert } from 'lucide-react'
+import { Building, CalendarClock, CircleAlert, DoorOpen, HandCoins, TriangleAlert } from 'lucide-react'
 import { Link } from 'react-router'
-import { contractsApi, propertiesApi, queryKeys, roomsApi } from '@/api'
+import { contractsApi, invoicesApi, propertiesApi, queryKeys, roomsApi } from '@/api'
 import { Card, PageHeader, Spinner } from '@/components/ui'
 import { useAuth } from '@/features/auth/AuthContext'
 import { cx } from '@/lib/cx'
+import { formatMoney } from '@/lib/format'
 import styles from './DashboardPage.module.css'
 
 // Chỉ cần totalCount → gọi pageSize=1 cho nhẹ.
@@ -50,6 +51,25 @@ const STATS = [
       return { queryKey: queryKeys.contracts.list(params), queryFn: ({ signal }) => contractsApi.list(params, { signal }) }
     },
   },
+  // Công nợ trên mọi phiếu đã chốt (invoices.md#số-tổng-hợp) — cùng một lời gọi cho cả hai thẻ.
+  {
+    id: 'outstanding',
+    label: 'Còn nợ (phiếu đã chốt)',
+    icon: HandCoins,
+    to: '/invoices?allMonths=1&unpaidOnly=1',
+    tone: 'warning',
+    query: () => ({ queryKey: queryKeys.invoices.totals({}), queryFn: ({ signal }) => invoicesApi.totals({}, { signal }) }),
+    value: (data) => formatMoney(data.outstandingAmount),
+  },
+  {
+    id: 'overdueDebt',
+    label: 'Nợ quá hạn thanh toán',
+    icon: CircleAlert,
+    to: '/rooms?overdue=1',
+    tone: 'danger',
+    query: () => ({ queryKey: queryKeys.invoices.totals({}), queryFn: ({ signal }) => invoicesApi.totals({}, { signal }) }),
+    value: (data) => formatMoney(data.overdueAmount),
+  },
 ]
 
 export default function DashboardPage() {
@@ -73,7 +93,7 @@ export default function DashboardPage() {
                   </span>
                   <span className={styles.statLabel}>{stat.label}</span>
                   <span className={styles.statValue}>
-                    {isPending ? <Spinner size={18} /> : isError ? '—' : data.totalCount.toLocaleString('vi-VN')}
+                    {isPending ? <Spinner size={18} /> : isError ? '—' : stat.value ? stat.value(data) : data.totalCount.toLocaleString('vi-VN')}
                   </span>
                 </Card>
               </Link>

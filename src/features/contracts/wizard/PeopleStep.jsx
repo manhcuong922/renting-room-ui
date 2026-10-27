@@ -1,7 +1,7 @@
 import { Crown, Trash, UserPlus } from 'lucide-react'
 import { useState } from 'react'
 import { Alert, Badge, Button, CheckboxField, DateField, FormGrid, FormSection, SelectField, TextField } from '@/components/ui'
-import { GENDER_LABELS, RELATIONSHIP_GROUPS } from '@/constants/enums'
+import { GENDER_LABELS, OCCUPANT_ROLE_LABELS, RELATIONSHIP_GROUPS, toOptions } from '@/constants/enums'
 import { RenterPicker } from '@/features/renters/components/RenterPicker'
 import { ageAt } from '@/features/renters/renterForm'
 import { formatDate } from '@/lib/format'
@@ -121,6 +121,12 @@ export function PeopleStep({ form }) {
                     />
                   )}
                   <DateField label="Ngày vào ở" hint="Trống = ngày bắt đầu" {...form.field(`occupants.${i}.moveInDate`)} />
+                  <SelectField
+                    label="Vai trò"
+                    options={toOptions(OCCUPANT_ROLE_LABELS)}
+                    hint={o.role === 'CoTenant' ? (o.renter.idType === null ? 'Đồng thuê phải có số giấy tờ — bổ sung ở hồ sơ' : 'Có tên trên hợp đồng, không chia tiền') : undefined}
+                    {...form.field(`occupants.${i}.role`)}
+                  />
                 </FormGrid>
                 {needsGuardianConsent(o, v.startDate) && (
                   <CheckboxField

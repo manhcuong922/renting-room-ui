@@ -5,19 +5,28 @@ export const NUMBER = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 2 
  * Trạng thái ban đầu: mỗi công tơ { mode, value }.
  * - handover: mặc định "Dùng số mới nhất" (value null = latestReading, thường là số cuối của người thuê trước).
  * - final: bắt buộc nhập, trừ khi đã có chỉ số cuối (kind Final) → mặc định giữ số đó.
+ *   `prefillLatest` (không cần hóa đơn trả phòng): điền sẵn số chốt kỳ mới nhất — nhập nhỏ hơn ⇒ lỗi thứ tự chỉ số.
  */
-export function initialReadings(meters, kind) {
+export function initialReadings(meters, kind, { prefillLatest = false } = {}) {
   return Object.fromEntries(
     meters.map((m) => {
       const keep = kind === 'handover' ? Boolean(m.latestReading) : m.latestReading?.kind === 'Final'
-      return [m.id, { mode: keep ? 'latest' : 'custom', value: null }]
+      const value = !keep && prefillLatest ? (m.latestReading?.value ?? null) : null
+      return [m.id, { mode: keep ? 'latest' : 'custom', value }]
     }),
   )
 }
 
-/** Body gửi server: [{ meterId, value }] — value null = dùng số mới nhất / giữ chỉ số cuối đã nhập. */
+/**
+ * Body gửi server: [{ meterId, value }] — value null = dùng số mới nhất / giữ chỉ số cuối đã nhập.
+ * correctPreviousFinal (chỉ khi kích hoạt): số cuối của HĐ trước gõ nhầm ⇒ sửa số cuối đó về số nhận phòng này.
+ */
 export function toReadingInputs(meters, readings) {
-  return meters.map((m) => ({ meterId: m.id, value: readings[m.id]?.mode === 'custom' ? readings[m.id].value : null }))
+  return meters.map((m) => {
+    const r = readings[m.id]
+    const input = { meterId: m.id, value: r?.mode === 'custom' ? r.value : null }
+    return r?.correctPreviousFinal ? { ...input, correctPreviousFinal: true } : input
+  })
 }
 
 /** Lỗi phía client: số nhập phải ≥ số mới nhất. Trả { meterId: 'thông báo' }. */
@@ -35,12 +44,16 @@ export function validateReadings(meters, readings) {
 
 /**
  * Lỗi server về chỉ số → { meterId: 'thông báo' } (contracts.md#kích-hoạt-bàn-giao-phòng, #lập-phiếu-quyết-toán):
- * HANDOVER_READING_REQUIRED / FINAL_READING_REQUIRED (meterIds), READING_NOT_MONOTONIC (meterId, previousValue).
+ * HANDOVER_READING_REQUIRED / FINAL_READING_REQUIRED (meterIds), READING_NOT_MONOTONIC (meterId, previousValue),
+ * HANDOVER_BELOW_PREVIOUS_FINAL (meterId, previousValue, previousContractNo).
  */
 export function readingErrorsFromApi(error) {
   const ext = error?.extensions ?? {}
   if (['HANDOVER_READING_REQUIRED', 'FINAL_READING_REQUIRED'].includes(error?.code)) {
     return Object.fromEntries((ext.meterIds ?? []).map((id) => [id, 'Thiếu chỉ số của công tơ này.']))
+  }
+  if (error?.code === 'HANDOVER_BELOW_PREVIOUS_FINAL' && ext.meterId) {
+    return { [ext.meterId]: `Nhỏ hơn số cuối ${NUMBER.format(ext.previousValue)} của hợp đồng trước${ext.previousContractNo ? ` (${ext.previousContractNo})` : ''}.` }
   }
   if (error?.code === 'READING_NOT_MONOTONIC' && ext.meterId) {
     return { [ext.meterId]: ext.previousValue != null ? `Phải ≥ chỉ số trước (${NUMBER.format(ext.previousValue)}).` : error.detail }

@@ -8,6 +8,7 @@ import { Button } from './Button'
 import { Card } from './Card'
 import { Alert } from './Feedback'
 import { Modal } from './Modal'
+import { useToast } from './toastContext'
 import styles from './Display.module.css'
 
 /** Khối nội dung có tiêu đề + nút hành động. */
@@ -83,6 +84,7 @@ export function SecretValue({ masked, onReveal }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
   const [cooldown, setCooldown] = useState(0)
+  const toast = useToast()
 
   useEffect(() => {
     if (!value) return undefined
@@ -108,6 +110,7 @@ export function SecretValue({ masked, onReveal }) {
       setValue(result.idNumber)
     } catch (err) {
       setError(getErrorMessage(err))
+      toast.error(getErrorMessage(err))
       if (err?.status === 429) setCooldown(err.retryAfter ?? 60)
     } finally {
       setBusy(false)

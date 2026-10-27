@@ -1,0 +1,4 @@
+/* Dòng đăng nhập thất bại tô đỏ nhạt (members.md#nhật-ký-đăng-nhập). */
+.failed {
+  background: var(--color-danger-soft);
+}
