@@ -255,12 +255,16 @@ export const INVOICE_LINE_TYPE_LABELS = {
 // Lý do một hợp đồng bị bỏ qua khi tạo phiếu (invoices.md#tạo-phiếu-nháp).
 export const INVOICE_SKIP_REASON_LABELS = {
   EXISTS: 'Kỳ này đã có phiếu',
-  PREVIOUS_PERIOD_NOT_BILLED: 'Chưa lập phiếu kỳ trước — lập lần lượt từ kỳ đầu',
+  PREVIOUS_PERIOD_NOT_BILLED: 'Chưa lập phiếu kỳ trước — lập lần lượt từ kỳ đầu, hoặc “Bỏ qua các kỳ chưa lập” nếu đã thu ngoài hệ thống',
+  GAP_NOT_SUPPORTED_PREPAID: 'Khu thu trước không bỏ qua kỳ chưa lập được',
+  GAP_PREVIOUS_NOT_FINALIZED: 'Phiếu liền trước các kỳ bỏ qua còn là nháp — chốt hoặc xóa nháp trước',
+  GAP_TOO_LONG: 'Bỏ qua quá 12 kỳ một lần — kiểm tra lại tháng cần lập',
+  GAP_SPANS_SCHEDULE_CHANGE: 'Các kỳ bỏ qua có đổi ngày chốt của khu',
   LATER_PERIOD_BILLED: 'Đã có phiếu kỳ sau',
   NO_PERIOD_IN_MONTH: 'Hợp đồng không có kỳ thuộc tháng thu này',
   USE_FINAL_INVOICE: 'Kỳ chứa ngày trả phòng — lập hóa đơn trả phòng ở hợp đồng',
   MOVE_OUT_NOTICED: 'Đã báo trả phòng trong kỳ — thanh lý và lập hóa đơn trả phòng; người thuê ở tiếp thì rút báo trả phòng rồi tạo lại',
-  MISSING_READING: 'Thiếu chỉ số cuối kỳ — nhập ở Ghi chỉ số rồi tạo lại',
+  MISSING_READING: 'Thiếu chỉ số — nhập ở Ghi chỉ số (kể cả chỉ số chốt kỳ cuối khoảng bỏ qua) rồi tạo lại',
   PREVIOUS_PERIOD_INCOMPLETE: 'Nháp kỳ trước còn thiếu chỉ số — nhập lại chỉ số, tính lại nháp kỳ trước rồi tạo kỳ này',
 }
 

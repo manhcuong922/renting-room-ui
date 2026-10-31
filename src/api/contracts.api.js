@@ -14,6 +14,8 @@ export const contractsApi = {
   // Số nhỏ hơn số cuối HĐ trước ⇒ 422 HANDOVER_BELOW_PREVIOUS_FINAL; số cuối người cũ gõ nhầm ⇒ gửi lại kèm correctPreviousFinal: true.
   activate: (id, body, { idempotencyKey } = {}) => http.post(`/contracts/${id}/activate`, body, { idempotencyKey }),
   billingPeriods: (id, query, options) => http.get(`/contracts/${id}/billing-periods`, { ...options, query }),
+  // Khoảng ngắt tính tiền (kỳ đã thu ngoài hệ thống) → [{ id, fromDate, toDate, periodCount, resumedInvoiceId, note }]
+  billingGaps: (id, options) => http.get(`/contracts/${id}/billing-gaps`, options),
   // Văn bản .docx để in / ký — nháp có dòng "BẢN NHÁP"; có số giấy tờ đầy đủ (server ghi log).
   document: (id) => http.get(`/contracts/${id}/document`, { responseType: 'blob' }),
   dataReview: (query, options) => http.get('/contracts/data-review', { ...options, query }),

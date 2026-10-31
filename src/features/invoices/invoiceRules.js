@@ -35,3 +35,8 @@ export function groupLines(lines) {
 
 /** Tóm tắt một lệnh trả kết quả từng phần để hiện thành bảng "phòng nào được, phòng nào lỗi". */
 export const countFailed = (rows) => rows.filter((r) => !r.ok).length
+
+/** "01/07/2026 – 30/09/2026 (3 kỳ)" */
+export function describeUnbilled(periods) {
+  return `${formatDate(periods[0].start)} – ${formatDate(periods.at(-1).end)} (${periods.length} kỳ)`
+}

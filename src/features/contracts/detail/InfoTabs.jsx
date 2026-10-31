@@ -295,7 +295,8 @@ export function BillingTab({ contract: c }) {
       primary: true,
       cell: (p) => (
         <span>
-          {formatBillingMonth(p.billingMonth)} {p.start <= today && today <= p.end && <Badge tone="info">Kỳ hiện tại</Badge>}
+          {formatBillingMonth(p.billingMonth)} {p.start <= today && today <= p.end && <Badge tone="info">Kỳ hiện tại</Badge>}{' '}
+          {p.skipped && <Badge tone="neutral">Đã thu ngoài hệ thống</Badge>}
         </span>
       ),
     },
@@ -305,7 +306,7 @@ export function BillingTab({ contract: c }) {
   return (
     <Section
       title="Kỳ thu"
-      description="Kỳ chuẩn của khu cắt theo “tính tiền từ ngày” và ngày trả phòng. Kỳ đầu lẻ không gộp vào kỳ sau và thuộc tháng thu của khu; khu đổi ngày chốt có kỳ chuyển tiếp."
+      description="Kỳ chuẩn của khu cắt theo “tính tiền từ ngày” và ngày trả phòng. Kỳ đầu lẻ không gộp vào kỳ sau và thuộc tháng thu của khu; khu đổi ngày chốt có kỳ chuyển tiếp. Kỳ “Đã thu ngoài hệ thống” là kỳ chủ trọ thu tay khi không dùng phần mềm — không có phiếu."
     >
       <QueryView query={query} isEmpty={(d) => d.length === 0} empty={<EmptyState title="Chưa có kỳ thu" />}>
         {(periods) => <DataTable columns={columns} rows={periods} rowKey={(p) => p.start} caption="Kỳ thu" />}

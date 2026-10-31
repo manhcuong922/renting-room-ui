@@ -36,6 +36,7 @@ import { GenerateInvoicesDialog } from '@/features/invoices/components/GenerateI
 import { useRoomMeters } from '@/features/shared/queries'
 import { useIdempotencyKey } from '@/hooks/useIdempotencyKey'
 import { getErrorMessage } from '@/lib/http/ApiError'
+import { describeUnbilled } from '@/features/invoices/invoiceRules'
 import { addDays, formatDate, formatMoney, todayVN } from '@/lib/format'
 import { useLiquidationPreview } from '../hooks'
 import { MeterReadingsFields } from './MeterReadingsFields'
@@ -254,6 +255,9 @@ export function FinalInvoiceDialog({ contract: c, required = true, onClose, onDo
   const [readingErrors, setReadingErrors] = useState({})
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
+  // Kỳ trước kỳ cuối chưa lập (thu tay ngoài hệ thống?) — server trả PREVIOUS_PERIOD_NOT_BILLED kèm unbilledPeriods; chủ trọ xác nhận bỏ qua.
+  const [unbilled, setUnbilled] = useState(null)
+  const [skip, setSkip] = useState(false)
   const current = readings ?? initialReadings(meterList, 'final', { prefillLatest: !required })
 
   const submit = async () => {
@@ -262,17 +266,22 @@ export function FinalInvoiceDialog({ contract: c, required = true, onClose, onDo
     if (Object.keys(clientErrors).length) return
     setBusy(true)
     setError(null)
-    const body = { finalReadings: toReadingInputs(meterList, current) }
+    const body = { finalReadings: toReadingInputs(meterList, current), skipUnbilledPeriods: skip }
     try {
       const invoice = await contractsApi.createFinalInvoice(c.id, body, { idempotencyKey: idem.keyFor(body) })
       await onDone()
       toast.success(`Đã lập hóa đơn trả phòng nháp — ${formatMoney(invoice?.summary?.totalAmount)}.`)
       onClose()
     } catch (err) {
-      setError(err)
-      toast.error(getErrorMessage(err))
-      setReadingErrors(readingErrorsFromApi(err))
-      if (err.code === 'METER_NOT_IN_ROOM') void meters.refetch()
+      if (err.code === 'PREVIOUS_PERIOD_NOT_BILLED' && Array.isArray(err.extensions?.unbilledPeriods) && err.extensions.unbilledPeriods.length) {
+        setUnbilled(err.extensions.unbilledPeriods)
+        setError(null)
+      } else {
+        setError(err)
+        toast.error(getErrorMessage(err))
+        setReadingErrors(readingErrorsFromApi(err))
+        if (err.code === 'METER_NOT_IN_ROOM') void meters.refetch()
+      }
     } finally {
       setBusy(false)
     }
@@ -303,6 +312,13 @@ export function FinalInvoiceDialog({ contract: c, required = true, onClose, onDo
     >
       <div style={{ display: 'grid', gap: 'var(--space-4)' }}>
         <MeterReadingsFields query={meters} kind="final" readings={current} onChange={setReadings} errors={readingErrors} />
+        {unbilled && (
+          <Alert tone="warning">
+            <strong>Chưa lập phiếu các kỳ trước kỳ cuối:</strong> {describeUnbilled(unbilled)}. Nếu đã thu tay ngoài hệ thống thì bỏ qua các kỳ này; chỉ số đầu của đoạn cuối là chỉ số
+            chốt kỳ liền trước (nhập ở Ghi chỉ số trước khi lập).
+            <CheckboxField label="Các kỳ trên đã thu ngoài hệ thống — bỏ qua" checked={skip} onChange={(e) => setSkip(e.target.checked)} />
+          </Alert>
+        )}
         {error && <Alert>{getErrorMessage(error)}</Alert>}
       </div>
     </Modal>
@@ -340,7 +356,7 @@ function PendingChargesList({ preview: p, onCancel }) {
  * Màn thanh lý khi đang thanh lý (contracts.md#xem-trước): một lần gọi dựng cả màn — kỳ cuối (đổi được khi hóa đơn trả phòng chưa chốt),
  * kỳ chưa chốt hóa đơn, hóa đơn từ ngày trả phòng, hóa đơn trả phòng, nợ, cần trả lại, khoản chưa xử lý, cọc, việc còn chặn Hoàn tất.
  */
-export function LiquidationPanel({ contract: c, preview, onCreateFinalInvoice }) {
+export function LiquidationPanel({ contract: c, preview, onCreateFinalInvoice, onCompleteExternally }) {
   const toast = useToast()
   const queryClient = useQueryClient()
   const [changing, setChanging] = useState(null)
@@ -382,9 +398,16 @@ export function LiquidationPanel({ contract: c, preview, onCreateFinalInvoice })
       actions={
         p &&
         !p.finalInvoiceId && (
-          <Button size="sm" variant={p.finalInvoiceRequired ? 'primary' : 'secondary'} onClick={() => onCreateFinalInvoice(p.finalInvoiceRequired)}>
-            Lập hóa đơn trả phòng
-          </Button>
+          <span style={rowStyle}>
+            <Button size="sm" variant={p.finalInvoiceRequired ? 'primary' : 'secondary'} onClick={() => onCreateFinalInvoice(p.finalInvoiceRequired)}>
+              Lập hóa đơn trả phòng
+            </Button>
+            {onCompleteExternally && !p.blockers.includes('LIQUIDATION_BEFORE_END_DATE') && (
+              <Button size="sm" variant="secondary" onClick={onCompleteExternally} title="Đã thu tay đến ngày đi — không lập hóa đơn trả phòng">
+                Đã xử lý ngoài hệ thống…
+              </Button>
+            )}
+          </span>
         )
       }
     >
@@ -480,11 +503,13 @@ function initialDecisions(c, p) {
     depositAmount: p?.deposit?.amount ?? c.deposit?.amount ?? 0,
     depositDate: today,
     depositNote: '',
+    externalNote: '',
   }
 }
 
-function validateDecisions(p, depositAmount) {
+function validateDecisions(p, depositAmount, external) {
   return (v) => ({
+    externalNote: external && !v.externalNote.trim() ? 'Ghi đã thu bằng cách nào, đến ngày nào.' : null,
     reason: p?.needsDebtDecision && v.settlement === 'WriteOff' && !v.reason.trim() ? 'Nhập lý do bỏ nợ.' : null,
     refundConfirmed: p?.needsRefundDecision && !v.refundConfirmed ? 'Trả lại người thuê rồi tích “Đã trả” để hoàn tất.' : null,
     refundedOn: p?.needsRefundDecision && v.refundedOn > todayVN() ? 'Ngày không ở tương lai.' : null,
@@ -500,8 +525,9 @@ function validateDecisions(p, depositAmount) {
 }
 
 /** Body hoàn tất: chỉ gửi mục đang cần quyết (contracts.md#hoàn-tất). */
-function completeBody(p, v, depositAmount) {
-  const body = { settlement: null, method: null, paidAt: null, reason: null, refund: null, pendingCharges: null, deposit: null }
+function completeBody(p, v, depositAmount, external) {
+  const body = { settlement: null, method: null, paidAt: null, reason: null, refund: null, pendingCharges: null, deposit: null, externalSettlement: null }
+  if (external) body.externalSettlement = { note: v.externalNote.trim() }
   if (p?.needsDebtDecision) {
     if (v.settlement === 'CollectAll') Object.assign(body, { settlement: 'CollectAll', method: v.method, paidAt: v.paidAt || null })
     else Object.assign(body, { settlement: 'WriteOff', reason: v.reason.trim() })
@@ -519,7 +545,7 @@ function completeBody(p, v, depositAmount) {
  * Còn nợ ⇒ Thu toàn bộ / Bỏ nợ · Cần trả lại ⇒ "Đã trả" · Khoản chưa xử lý ⇒ đã trả / thu tay · Cọc ⇒ Trả / Không trả / Để sau.
  * Lỗi ở bất kỳ mục nào ⇒ server không lưu gì; xem trước đã cũ (REFUND_PENDING, PENDING_CHARGES, CONTRACT_HAS_DEBT) ⇒ tải lại.
  */
-export function CompleteLiquidationDialog({ contract: c, preview: p, onClose, onDone }) {
+export function CompleteLiquidationDialog({ contract: c, preview: p, external = false, onClose, onDone }) {
   const toast = useToast()
   const queryClient = useQueryClient()
   const canWriteOff = useCanWriteOff()
@@ -528,17 +554,17 @@ export function CompleteLiquidationDialog({ contract: c, preview: p, onClose, on
 
   return (
     <FormDialog
-      title="Hoàn tất thanh lý"
+      title={external ? 'Hoàn tất thanh lý — đã xử lý ngoài hệ thống' : 'Hoàn tất thanh lý'}
       description={`Hợp đồng kết thúc; người ở và xe còn lại tự kết thúc tại ngày trả phòng ${formatDate(c.actualEndDate)}. Phòng thành “Trống” từ hôm sau.`}
       size="md"
       initial={initialDecisions(c, p)}
-      validate={validateDecisions(p, depositAmount)}
-      codeFields={{ INVALID_REFUND_AMOUNT: 'depositAmount', REQUIRED: 'depositNote', INVALID_REFUND_DATE: 'refundedOn', INVALID_PAID_AT: 'paidAt' }}
+      validate={validateDecisions(p, depositAmount, external)}
+      codeFields={{ EXTERNAL_NOTE_REQUIRED: 'externalNote', INVALID_REFUND_AMOUNT: 'depositAmount', REQUIRED: 'depositNote', INVALID_REFUND_DATE: 'refundedOn', INVALID_PAID_AT: 'paidAt' }}
       submitLabel="Hoàn tất"
       onClose={onClose}
       onSubmit={async (v, form) => {
         try {
-          await contractsApi.completeLiquidation(c.id, completeBody(p, v, depositAmount))
+          await contractsApi.completeLiquidation(c.id, completeBody(p, v, depositAmount, external))
         } catch (error) {
           // Xem trước đã cũ: có thêm mục cần quyết ⇒ tải lại để hiện đúng lựa chọn.
           if (['REFUND_PENDING', 'PENDING_CHARGES', 'CONTRACT_HAS_DEBT'].includes(error.code)) {
@@ -558,6 +584,14 @@ export function CompleteLiquidationDialog({ contract: c, preview: p, onClose, on
         const v = form.values
         return (
           <>
+            {external && (
+              <FormSection
+                title="Kỳ trả phòng đã xử lý ngoài hệ thống"
+                description="Không lập hóa đơn trả phòng, không cần chỉ số cuối. Các phiếu nháp còn sót bị xóa; các kỳ chưa có phiếu đến hết ngày trả phòng ghi là đã thu ngoài. Nợ phiếu đã chốt, cọc, khoản chưa xử lý vẫn chọn bên dưới."
+              >
+                <TextAreaField label="Ghi chú" required rows={2} maxLength={500} placeholder="VD Đã thu tay đến ngày đi, sổ giấy khu A" {...form.field('externalNote')} />
+              </FormSection>
+            )}
             {p?.needsDebtDecision && (
               <FormSection title={`Còn nợ ${formatMoney(p.outstanding)}`} description="Trên các hóa đơn đã chốt chưa thu đủ.">
                 {canWriteOff ? (

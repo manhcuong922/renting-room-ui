@@ -10,7 +10,8 @@ export const invoicesApi = {
   totals: (query, options) => http.get('/invoices/totals', { ...options, query }),
   get: (id, options) => http.get(`/invoices/${id}`, options),
 
-  // → { created, recalculated, withIssues, skipped: [{ contractId, contractNo, roomCode, reason }] }
+  // → { created, recalculated, withIssues, gapsCreated, skipped: [{ contractId, contractNo, roomCode, reason, unbilledPeriods? }] }
+  // body.skipUnbilledPeriods: true ⇒ ghi khoảng ngắt cho các kỳ chưa lập (đã thu ngoài hệ thống) rồi tạo phiếu kỳ này.
   generate: (body, { idempotencyKey } = {}) => http.post('/invoices/generate', body, { idempotencyKey }),
   // Mọi khu (propertyIds null) → mảng [{ propertyId, propertyCode, result, errorCode }]
   generateBulk: (body, { idempotencyKey } = {}) => http.post('/invoices/generate-bulk', body, { idempotencyKey }),

@@ -26,3 +26,12 @@ export function monotonicMessage(error) {
   if (nextValue !== null && nextValue !== undefined) parts.push(`không lớn hơn ${formatReading(nextValue)}`)
   return parts.length ? `Chỉ số phải ${parts.join(' và ')}.` : (error.detail ?? 'Chỉ số không hợp lệ so với các chỉ số đã ghi.')
 }
+
+// Lọc phía client (meters.md — lưới có `invoice`): Chưa nhập · Chưa có hóa đơn · Cần tính lại · Đã chốt.
+export const VIEW_FILTERS = {
+  noReading: { label: 'Chưa nhập', test: (r) => !r.current },
+  noInvoice: { label: 'Chưa có hóa đơn', test: (r) => !r.invoice },
+  stale: { label: 'Cần tính lại', test: (r) => r.invoice?.isStale },
+  finalized: { label: 'Đã chốt', test: (r) => r.invoice?.status === 'Finalized' },
+}
+export const VIEW_OPTIONS = Object.entries(VIEW_FILTERS).map(([value, f]) => ({ value, label: f.label }))

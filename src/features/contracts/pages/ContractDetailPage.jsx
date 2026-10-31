@@ -320,7 +320,7 @@ export default function ContractDetailPage() {
                 </Alert>
               )}
               {c.status === 'Liquidating' && (
-                <LiquidationPanel contract={c} preview={preview} onCreateFinalInvoice={openFinalInvoice} />
+                <LiquidationPanel contract={c} preview={preview} onCreateFinalInvoice={openFinalInvoice} onCompleteExternally={() => setDialog('completeExternal')} />
               )}
             </div>
 
@@ -368,6 +368,7 @@ export default function ContractDetailPage() {
             {dialog === 'liquidate' && <StartLiquidationDialog contract={c} onClose={() => setDialog(null)} onDone={done} />}
             {dialog === 'finalInvoice' && <FinalInvoiceDialog contract={c} required={finalInvoiceRequired} onClose={() => setDialog(null)} onDone={refresh} />}
             {dialog === 'complete' && <CompleteLiquidationDialog contract={c} preview={preview.data} onClose={() => setDialog(null)} onDone={refresh} />}
+            {dialog === 'completeExternal' && <CompleteLiquidationDialog contract={c} preview={preview.data} external onClose={() => setDialog(null)} onDone={refresh} />}
             {dialog === 'generate' && <GenerateInvoicesDialog contract={c} defaultMonth={currentBillingMonth()} onClose={() => setDialog(null)} />}
             {dialog === 'balance' && <ContractBalanceDialog contractId={c.id} onClose={() => setDialog(null)} />}
             {dialog === 'transfer' && <TransferRoomDialog contract={c} onClose={() => setDialog(null)} onDone={done} />}
