@@ -10,7 +10,7 @@ export const Role = Object.freeze({
 export const ROLE_LABELS = {
   SystemAdmin: 'Quản trị viên',
   OrgOwner: 'Chủ trọ',
-  OrgManager: 'Phó quản lý',
+  OrgManager: 'Quản lý khu',
 }
 
 export const USER_STATUS = {
@@ -264,8 +264,8 @@ export const INVOICE_SKIP_REASON_LABELS = {
   NO_PERIOD_IN_MONTH: 'Hợp đồng không có kỳ thuộc tháng thu này',
   USE_FINAL_INVOICE: 'Kỳ chứa ngày trả phòng — lập hóa đơn trả phòng ở hợp đồng',
   MOVE_OUT_NOTICED: 'Đã báo trả phòng trong kỳ — thanh lý và lập hóa đơn trả phòng; người thuê ở tiếp thì rút báo trả phòng rồi tạo lại',
-  MISSING_READING: 'Thiếu chỉ số — nhập ở Ghi chỉ số (kể cả chỉ số chốt kỳ cuối khoảng bỏ qua) rồi tạo lại',
-  PREVIOUS_PERIOD_INCOMPLETE: 'Nháp kỳ trước còn thiếu chỉ số — nhập lại chỉ số, tính lại nháp kỳ trước rồi tạo kỳ này',
+  MISSING_READING: 'Thiếu chỉ số — nhập ở Ghi chỉ số (chỉ số cuối kỳ này, chỉ số chốt kỳ trước, hoặc chốt kỳ cuối khoảng bỏ qua) rồi tạo lại',
+  PREVIOUS_PERIOD_INCOMPLETE: 'Nháp kỳ trước còn thiếu chỉ số — nhập lại chỉ số ở lưới tháng đó (nháp tự tính lại) rồi tạo kỳ này',
 }
 
 // Khoản phát sinh theo phòng (room-charges.md)
@@ -319,6 +319,8 @@ export const AUDIT_ACTION_LABELS = {
   RevealIdNumber: 'Xem số giấy tờ đầy đủ',
   PrintWithIdNumbers: 'In có số giấy tờ',
   ExportWithIdNumbers: 'Xuất Excel có số giấy tờ',
+  ExportRenters: 'Xuất Excel người thuê',
+  IdNumberLookup: 'Dò số giấy tờ',
   Anonymized: 'Ẩn danh',
   Import: 'Nhập Excel',
 }

@@ -27,6 +27,7 @@ export default function PropertyDetailPage() {
   const [tab, setTab] = useTabParam('rooms')
   const [dialog, setDialog] = useState(null) // 'archive' | 'restore' | 'export'
   const canImport = usePermission(Permission.ImportsManage)
+  const canAdminister = usePermission(Permission.PropertiesAdminister) // ngừng / khôi phục khu — chỉ chủ trọ
 
   const invalidate = [queryKeys.properties.all, queryKeys.rooms.all]
   const archive = useAction({ mutationFn: () => propertiesApi.archive(id), invalidate, success: 'Đã ngừng sử dụng khu.', toastErrors: false })
@@ -70,15 +71,16 @@ export default function PropertyDetailPage() {
                   <Button variant="secondary" icon={FileSpreadsheet} onClick={() => setDialog('export')}>
                     Xuất người thuê
                   </Button>
-                  {property.isArchived ? (
-                    <Button variant="secondary" icon={ArchiveRestore} onClick={() => setDialog('restore')}>
-                      Khôi phục
-                    </Button>
-                  ) : (
-                    <Button variant="ghost" icon={Archive} onClick={() => setDialog('archive')}>
-                      Ngừng sử dụng
-                    </Button>
-                  )}
+                  {canAdminister &&
+                    (property.isArchived ? (
+                      <Button variant="secondary" icon={ArchiveRestore} onClick={() => setDialog('restore')}>
+                        Khôi phục
+                      </Button>
+                    ) : (
+                      <Button variant="ghost" icon={Archive} onClick={() => setDialog('archive')}>
+                        Ngừng sử dụng
+                      </Button>
+                    ))}
                 </>
               }
             />

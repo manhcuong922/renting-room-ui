@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { KeyRound, Lock, LockOpen, Pencil, UserMinus, UserPlus, Users } from 'lucide-react'
+import { Building2, KeyRound, Lock, LockOpen, Pencil, UserMinus, UserPlus, Users } from 'lucide-react'
 import { useState } from 'react'
 import { membersApi, queryKeys } from '@/api'
 import {
@@ -21,11 +21,12 @@ import { ROLE_LABELS, USER_STATUS } from '@/constants/enums'
 import { Can } from '@/features/auth/access'
 import { usePermission } from '@/features/auth/AuthContext'
 import { Permission } from '@/features/auth/permissions'
+import { usePropertyOptions } from '@/features/shared/queries'
 import { useAction } from '@/hooks/useAction'
 import { useTabParam } from '@/hooks/useTabParam'
 import { formatDateTime } from '@/lib/format'
 import { LoginEventsTab } from '../components/LoginEventsTab'
-import { MemberFormDialog } from '../components/MemberFormDialog'
+import { AssignPropertiesDialog, MemberFormDialog } from '../components/MemberFormDialog'
 
 const TAB_PREFIX = 'members'
 
@@ -41,14 +42,14 @@ function ActivationBadge({ member }) {
   )
 }
 
-// docs/api/members.md — xem: chủ trọ + phó quản lý; thao tác: chỉ chủ trọ (ẩn nút với phó quản lý).
+// docs/api/members.md — xem: chủ trọ + quản lý khu; thao tác: chỉ chủ trọ (ẩn nút với quản lý khu).
 export default function MembersPage() {
   const [includeRemoved, setIncludeRemoved] = useState(false)
   const [editing, setEditing] = useState(null) // null | 'new' | member
   const [confirm, setConfirm] = useState(null) // { type: 'lock'|'remove', member }
   const [tempPassword, setTempPassword] = useState(null)
   const canManage = usePermission(Permission.MembersManage)
-  // Nhật ký đăng nhập: chỉ chủ trọ (phó quản lý → 403) — ẩn hẳn tab.
+  // Nhật ký đăng nhập: chỉ chủ trọ (quản lý khu → 403) — ẩn hẳn tab.
   const [tabParam, setTab] = useTabParam('list')
   const tab = canManage ? tabParam : 'list'
 
@@ -58,42 +59,20 @@ export default function MembersPage() {
   })
 
   const invalidate = [queryKeys.members.all]
-  const lock = useAction({ mutationFn: (id) => membersApi.lock(id), invalidate, success: 'Đã khóa phó quản lý', toastErrors: false })
+  const lock = useAction({ mutationFn: (id) => membersApi.lock(id), invalidate, success: 'Đã khóa quản lý khu', toastErrors: false })
   const remove = useAction({ mutationFn: (id) => membersApi.remove(id), invalidate, success: 'Đã gỡ khỏi tổ chức', toastErrors: false })
   const unlock = useAction({ mutationFn: (id) => membersApi.unlock(id), invalidate, success: 'Đã mở khóa' })
   const resetPassword = useAction({ mutationFn: (id) => membersApi.resetPassword(id), invalidate, onSuccess: setTempPassword })
-  const sensitiveAccess = useAction({
-    mutationFn: ({ id, allowed }) => membersApi.setSensitiveDataAccess(id, allowed),
-    invalidate,
-    success: (_, { allowed }) => (allowed ? 'Đã cấp quyền xem số giấy tờ.' : 'Đã thu hồi quyền xem số giấy tờ.'),
-  })
-
-  const writeOff = useAction({
-    mutationFn: ({ id, allowed }) => membersApi.setWriteOffPermission(id, allowed),
-    invalidate,
-    success: (_, { allowed }) => (allowed ? 'Đã cấp quyền bỏ nợ.' : 'Đã thu hồi quyền bỏ nợ.'),
-  })
-
-  // Công tắc quyền riêng của phó quản lý: chủ trọ luôn có; người đã gỡ không còn; phó quản lý khác chỉ xem.
-  const permissionCell = (m, { field, action, onLabel }) => {
-    if (m.role === 'OrgOwner') return 'Luôn có'
+  const [assigning, setAssigning] = useState(null) // member — hộp "Giao khu"
+  const properties = usePropertyOptions({ includeArchived: true })
+  const propertyLabel = Object.fromEntries((properties.data ?? []).map((p) => [p.id, p.code]))
+  // Khu được giao (members.md#giao-khu): chủ trọ = mọi khu; quản lý khu = danh sách mã khu.
+  const propertiesCell = (m) => {
+    if (m.role === 'OrgOwner') return 'Tất cả'
     if (m.status === 'Removed') return '—'
-    if (!canManage) return m[field] ? 'Có' : 'Không'
-    const busy = action.isPending && action.variables?.id === m.id
-    return (
-      <CheckboxField
-        label={m[field] ? onLabel : 'Không'}
-        checked={Boolean(m[field])}
-        disabled={busy}
-        onChange={(e) => action.mutate({ id: m.id, allowed: e.target.checked })}
-      />
-    )
+    if (!m.propertyIds?.length) return <Badge tone="warning">Chưa giao khu</Badge>
+    return m.propertyIds.map((id) => propertyLabel[id] ?? '…').join(', ')
   }
-
-  // Quyền xem / xuất số giấy tờ đầy đủ: chủ trọ luôn có; phó quản lý do chủ trọ bật / tắt (members.md#quyền-xem-dữ-liệu-nhạy-cảm).
-  const sensitiveCell = (m) => permissionCell(m, { field: 'canViewSensitiveData', action: sensitiveAccess, onLabel: 'Được xem' })
-  // Quyền bỏ nợ: bật riêng từng người, mặc định tắt (members.md#quyền-bỏ-nợ).
-  const writeOffCell = (m) => permissionCell(m, { field: 'canWriteOff', action: writeOff, onLabel: 'Được bỏ nợ' })
 
   const columns = [
     {
@@ -118,8 +97,7 @@ export default function MembersPage() {
         </span>
       ),
     },
-    { key: 'sensitive', header: 'Xem số giấy tờ', cell: sensitiveCell },
-    { key: 'writeOff', header: 'Bỏ nợ', cell: writeOffCell },
+    { key: 'properties', header: 'Khu được giao', cell: propertiesCell },
     { key: 'lastLogin', header: 'Đăng nhập cuối', cell: (m) => (m.lastLoginAt ? formatDateTime(m.lastLoginAt) : 'Chưa đăng nhập') },
     {
       key: 'actions',
@@ -133,6 +111,9 @@ export default function MembersPage() {
             <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 6, justifyContent: 'flex-end' }}>
               <Button size="sm" variant="secondary" icon={Pencil} onClick={() => setEditing(m)}>
                 Sửa
+              </Button>
+              <Button size="sm" variant="secondary" icon={Building2} onClick={() => setAssigning(m)}>
+                Giao khu
               </Button>
               <Button size="sm" variant="secondary" icon={KeyRound} loading={resetPassword.isPending && resetPassword.variables === m.id} onClick={() => resetPassword.mutate(m.id)}>
                 Cấp lại mật khẩu
@@ -159,11 +140,11 @@ export default function MembersPage() {
     <>
       <PageHeader
         title="Thành viên"
-        description={canManage ? 'Quản lý phó quản lý của tổ chức.' : 'Bạn chỉ có quyền xem danh sách thành viên.'}
+        description={canManage ? 'Quản lý quản lý khu của tổ chức.' : 'Bạn chỉ có quyền xem danh sách thành viên.'}
         actions={
           <Can permission={Permission.MembersManage}>
             <Button icon={UserPlus} onClick={() => setEditing('new')}>
-              Thêm phó quản lý
+              Thêm quản lý khu
             </Button>
           </Can>
         }
@@ -209,11 +190,12 @@ export default function MembersPage() {
           }}
         />
       )}
+      {assigning && <AssignPropertiesDialog member={assigning} onClose={() => setAssigning(null)} />}
       <ConfirmDialog
         open={confirm?.type === 'lock'}
         onClose={() => setConfirm(null)}
         title={`Khóa ${confirm?.member?.fullName ?? ''}?`}
-        message="Phó quản lý sẽ bị đăng xuất ngay."
+        message="Quản lý khu sẽ bị đăng xuất ngay."
         confirmLabel="Khóa"
         tone="danger"
         onConfirm={() => lock.mutateAsync(confirm.member.id)}
@@ -228,7 +210,7 @@ export default function MembersPage() {
         tone="danger"
         onConfirm={() => remove.mutateAsync(confirm.member.id)}
       />
-      <TempPasswordDialog title="Mật khẩu tạm của phó quản lý" data={tempPassword} onClose={() => setTempPassword(null)} />
+      <TempPasswordDialog title="Mật khẩu tạm của quản lý khu" data={tempPassword} onClose={() => setTempPassword(null)} />
     </>
   )
 }

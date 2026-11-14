@@ -94,7 +94,8 @@ export function ImportPanel({ property, kind, title, description, columns, unitK
       if (bad || result.fileErrors?.length) toast.warning(`Đã đọc ${result.rows.length} dòng — ${bad} dòng có lỗi, sửa ngay trên lưới hoặc sửa file rồi tải lại.`)
       else toast.success(`Đã đọc ${result.rows.length} dòng — chưa lưu gì, kiểm tra rồi bấm Lưu.`)
     } catch (error) {
-      // Lỗi cả file: IMPORT_FILE_INVALID / TOO_LARGE / TEMPLATE_MISMATCH / TOO_MANY_ROWS; 429: quá 10 lần xem trước / phút.
+      // Lỗi cả file: IMPORT_FILE_INVALID / TOO_LARGE (> 2 MB hoặc giải nén > 5 MB) / TEMPLATE_MISMATCH / TOO_MANY_ROWS ("hơn 500 dòng" —
+      // server dừng đọc ở dòng 501, không biết tổng số); 429: quá 10 lần xem trước / phút. `detail` của server đã ghi cách sửa.
       toast.error(getErrorMessage(error))
     } finally {
       setBusy(null)

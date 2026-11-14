@@ -47,7 +47,7 @@ export function ImportTab({ property }) {
     <>
       <div style={{ marginBottom: 'var(--space-4)' }}>
         <Alert tone="info">
-          Nhập <strong>phòng trước</strong>, rồi đến người thuê. File .xlsx theo mẫu, tối đa 2 MB và 500 dòng; ô có công thức không được nhận. Nhập chỉ tạo mới — sửa
+          Nhập <strong>phòng trước</strong>, rồi đến người thuê. File .xlsx theo mẫu, tối đa 2 MB và 500 dòng; ô có công thức không được nhận. Chỉ đọc 50 cột đầu của 10 sheet đầu — nên để riêng sheet theo mẫu, bỏ ảnh / sheet khác (file giải nén quá 5 MB bị từ chối). Nhập chỉ tạo mới — sửa
           dữ liệu đã có thì làm ở màn Phòng / Người thuê / Hợp đồng.
         </Alert>
       </div>

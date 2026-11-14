@@ -28,7 +28,7 @@ export default function AuditLogsPage() {
 
   return (
     <>
-      <PageHeader title="Nhật ký thao tác" description="Mọi thao tác tạo / sửa / xóa dữ liệu và các lần xem, in, xuất số giấy tờ đầy đủ — của bạn và của phó quản lý. Giữ 5 năm." />
+      <PageHeader title="Nhật ký thao tác" description="Mọi thao tác tạo / sửa / xóa dữ liệu và các lần xem, in, xuất số giấy tờ đầy đủ — của bạn và của quản lý khu. Giữ 5 năm." />
       <Toolbar>
         <SelectField
           aria-label="Người làm"

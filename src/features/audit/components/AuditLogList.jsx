@@ -7,7 +7,7 @@ import { AUDIT_ACTION_LABELS, AUDIT_ENTITY_LABELS } from '@/constants/enums'
 import { formatDateTime } from '@/lib/format'
 import styles from './AuditLogList.module.css'
 
-const ACTION_TONE = { Created: 'success', Updated: 'info', Deleted: 'danger', Anonymized: 'danger', RevealIdNumber: 'warning', PrintWithIdNumbers: 'warning', ExportWithIdNumbers: 'warning' }
+const ACTION_TONE = { Created: 'success', Updated: 'info', Deleted: 'danger', Anonymized: 'danger', RevealIdNumber: 'warning', PrintWithIdNumbers: 'warning', ExportWithIdNumbers: 'warning', ExportRenters: 'warning', IdNumberLookup: 'warning' }
 const MAX_INLINE = 80
 
 /** Giá trị trong `changes` → chuỗi đọc được. Server lưu một số trường (issues, bản chụp giá…) dưới dạng chuỗi JSON. */
@@ -65,7 +65,7 @@ function Changes({ changes }) {
 /**
  * Bảng nhật ký thao tác (docs/api/audit.md), mới nhất trước, phân trang.
  * `filter`: { entityType, entityId, userId, action, from, to } — truyền entityType + entityId để xem lịch sử của một đối tượng.
- * Chỉ chủ trọ gọi được: nơi dùng phải tự ẩn với phó quản lý (Permission.AuditView).
+ * Chỉ chủ trọ gọi được: nơi dùng phải tự ẩn với quản lý khu (Permission.AuditView).
  */
 export function AuditLogList({ filter, showEntity = true, emptyTitle = 'Chưa có thao tác nào được ghi' }) {
   const [paging, setPaging] = useState({ key: '', page: 1 })

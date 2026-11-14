@@ -22,6 +22,9 @@ export const Permission = Object.freeze({
   DashboardView: 'dashboard.view',
   PropertiesView: 'properties.view',
   PropertiesManage: 'properties.manage',
+  // Tạo khu, ngừng / khôi phục khu, bên cho thuê của khu (người ký thay + giấy ủy quyền) — chỉ chủ trọ (M01 ID-BR-28, 08/11/2026)
+  PropertiesAdminister: 'properties.administer',
+  PropertiesBankManage: 'properties.bank.manage', // tài khoản ngân hàng nhận tiền của khu — chỉ chủ trọ (H-06), đổi / xóa phải nhập mật khẩu
   RoomsView: 'rooms.view',
   RoomsManage: 'rooms.manage',
   RentersView: 'renters.view',
@@ -29,14 +32,14 @@ export const Permission = Object.freeze({
   RentersAnonymize: 'renters.anonymize', // ẩn danh hồ sơ ngay (không đảo ngược) — chỉ chủ trọ
   ContractsView: 'contracts.view',
   ContractsManage: 'contracts.manage',
-  BillingView: 'billing.view', // ghi chỉ số, phiếu tiền phòng, khoản phát sinh, thu tiền — chủ trọ + phó quản lý
+  BillingView: 'billing.view', // ghi chỉ số, phiếu tiền phòng, khoản phát sinh, thu tiền — chủ trọ + quản lý khu
   ContractTemplatesView: 'contract-templates.view',
   ContractTemplatesManage: 'contract-templates.manage',
   AuditView: 'audit.view', // nhật ký thao tác — chỉ chủ trọ
-  ImportsManage: 'imports.manage', // nhập Excel — chỉ chủ trọ
+  ImportsManage: 'imports.manage', // nhập Excel — chủ trọ + quản lý khu (khu được giao)
   MembersView: 'members.view',
-  MembersManage: 'members.manage', // thêm/sửa/khóa/gỡ/cấp lại mật khẩu phó quản lý — chỉ chủ trọ
-  OrganizationSettingsView: 'organization-settings.view', // thông tin chủ trọ, thời gian giữ dữ liệu — phó quản lý chỉ xem
+  MembersManage: 'members.manage', // thêm/sửa/khóa/gỡ/cấp lại mật khẩu quản lý khu — chỉ chủ trọ
+  OrganizationSettingsView: 'organization-settings.view', // thông tin chủ trọ, thời gian giữ dữ liệu — quản lý khu chỉ xem
   OrganizationSettingsManage: 'organization-settings.manage',
   OrganizationsManage: 'organizations.manage',
 })
@@ -46,6 +49,8 @@ const PERMISSION_POLICY = {
   [Permission.DashboardView]: Policy.OrgMember,
   [Permission.PropertiesView]: Policy.OrgMember,
   [Permission.PropertiesManage]: Policy.OrgMember,
+  [Permission.PropertiesAdminister]: Policy.OrgOwner,
+  [Permission.PropertiesBankManage]: Policy.OrgOwner,
   [Permission.RoomsView]: Policy.OrgMember,
   [Permission.RoomsManage]: Policy.OrgMember,
   [Permission.RentersView]: Policy.OrgMember,
@@ -55,9 +60,9 @@ const PERMISSION_POLICY = {
   [Permission.ContractsManage]: Policy.OrgMember,
   [Permission.BillingView]: Policy.OrgMember,
   [Permission.ContractTemplatesView]: Policy.OrgMember,
-  [Permission.ContractTemplatesManage]: Policy.OrgMember,
+  [Permission.ContractTemplatesManage]: Policy.OrgOwner, // mẫu dùng chung mọi khu — chỉ chủ trọ tạo / sửa / ngừng (08/11/2026)
   [Permission.AuditView]: Policy.OrgOwner,
-  [Permission.ImportsManage]: Policy.OrgOwner,
+  [Permission.ImportsManage]: Policy.OrgMember, // quản lý khu nhập được vào khu mình (08/11/2026)
   [Permission.MembersView]: Policy.OrgMember,
   [Permission.MembersManage]: Policy.OrgOwner,
   [Permission.OrganizationSettingsView]: Policy.OrgMember,
@@ -79,8 +84,8 @@ export function hasPermission(user, permission) {
 }
 
 /**
- * Xem / xuất số giấy tờ đầy đủ (conventions.md#dữ-liệu-cá-nhân): chủ trọ luôn có; phó quản lý khi chủ trọ cấp
- * (`canViewSensitiveData` của GET /me). Không có → ẩn nút 👁 và ô "Hiện đầy đủ số giấy tờ".
+ * Xem / xuất số giấy tờ đầy đủ (conventions.md#dữ-liệu-cá-nhân): chủ trọ và quản lý khu luôn có từ 08/11/2026 (quản lý: khu được giao —
+ * server đã lọc). Giữ đọc `canViewSensitiveData` của GET /me cho tài khoản bị khóa giữa phiên.
  */
 export function canViewSensitiveData(user) {
   if (!satisfiesPolicy(user, Policy.OrgMember)) return false
@@ -88,15 +93,15 @@ export function canViewSensitiveData(user) {
 }
 
 /**
- * Bỏ nợ (riêng, "Thanh toán + bỏ phần còn lại", "Bỏ nợ" khi hoàn tất thanh lý — auth.md#quyền-theo-từng-người): chủ trọ luôn có;
- * phó quản lý chỉ khi chủ trọ bật riêng cho người đó (`canWriteOff` của GET /me). KHÔNG phải quyền riêng của chủ trọ.
+ * Bỏ nợ (riêng, "Thanh toán + bỏ phần còn lại", "Bỏ nợ" khi hoàn tất thanh lý): chủ trọ và quản lý khu luôn có từ 08/11/2026
+ * (bỏ quyền cấp riêng) — vẫn đọc `canWriteOff` của GET /me.
  */
 export function canWriteOff(user) {
   if (!satisfiesPolicy(user, Policy.OrgMember)) return false
   return user.role === Role.OrgOwner || user.canWriteOff === true
 }
 
-/** Tự sửa hồ sơ (PUT /me): chủ trọ và SystemAdmin; phó quản lý do chủ trọ sửa hộ (403 PROFILE_MANAGED_BY_OWNER). */
+/** Tự sửa hồ sơ (PUT /me): chủ trọ và SystemAdmin; quản lý khu do chủ trọ sửa hộ (403 PROFILE_MANAGED_BY_OWNER). */
 export function canEditOwnProfile(user) {
   return Boolean(user) && !user.mustChangePassword && user.role !== Role.OrgManager
 }

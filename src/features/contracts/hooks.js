@@ -25,6 +25,15 @@ export function useBillingPeriods(id, until) {
   })
 }
 
+/** Khoảng ngắt tính tiền (kỳ đã thu ngoài hệ thống) của HĐ — cũ trước. resumedInvoiceId = phiếu nối tiếp; xóa nháp / hủy phiếu đó thì khoảng mất. */
+export function useBillingGaps(id, { enabled = true } = {}) {
+  return useQuery({
+    queryKey: queryKeys.contracts.billingGaps(id),
+    queryFn: ({ signal }) => contractsApi.billingGaps(id, { signal }),
+    enabled: Boolean(id) && enabled,
+  })
+}
+
 /**
  * Màn thanh lý (contracts.md#xem-trước): kỳ cuối + số tiền 3 cách, kỳ chưa chốt, hóa đơn từ ngày trả phòng, nợ, cần trả lại, khoản chưa xử lý, cọc.
  * HĐ còn hiệu lực: `actualEndDate` để xem trước trước khi bắt đầu thanh lý.

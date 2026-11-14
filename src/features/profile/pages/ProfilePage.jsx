@@ -46,7 +46,7 @@ export default function ProfilePage() {
               </div>
             ))}
           </dl>
-          {!canEdit && <p className={styles.note}>Phó quản lý không tự sửa hồ sơ — liên hệ chủ trọ để đổi thông tin.</p>}
+          {!canEdit && <p className={styles.note}>Quản lý khu không tự sửa hồ sơ — liên hệ chủ trọ để đổi thông tin.</p>}
         </Card>
         <Card>
           <h2 className={styles.sectionTitle}>Đổi mật khẩu</h2>

@@ -15,6 +15,7 @@ export const propertiesApi = {
   updateLessor: (id, body) => http.put(`/properties/${id}/lessor`, body),
   clearLessor: (id) => http.delete(`/properties/${id}/lessor`),
   revealLessorIdNumber: (id) => http.post(`/properties/${id}/lessor/reveal-id-number`),
+  // Chỉ chủ trọ; đổi / xóa phải kèm currentPassword (mật khẩu đăng nhập) — gửi lại đúng tài khoản cũ thì không cần (H-06). → 200 chi tiết khu
   updateBankAccount: (id, body) => http.put(`/properties/${id}/bank-account`, body),
   updateHouseRules: (id, body) => http.put(`/properties/${id}/house-rules`, body),
 }

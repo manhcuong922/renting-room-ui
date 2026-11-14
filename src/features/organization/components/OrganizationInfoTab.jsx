@@ -62,7 +62,7 @@ function InfoForm({ info }) {
 }
 
 /**
- * Thông tin tổ chức (members.md#thông-tin-tổ-chức): GET /org mọi thành viên; PUT /org chỉ chủ trọ — phó quản lý chỉ xem.
+ * Thông tin tổ chức (members.md#thông-tin-tổ-chức): GET /org mọi thành viên; PUT /org chỉ chủ trọ — quản lý khu chỉ xem.
  * Thông tin liên hệ ở đây được điền sẵn cho form "Thông tin chủ trọ" lần đầu.
  */
 export function OrganizationInfoTab() {

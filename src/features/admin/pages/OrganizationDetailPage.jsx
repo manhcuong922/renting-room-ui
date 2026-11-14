@@ -139,7 +139,7 @@ export default function OrganizationDetailPage() {
               />
             </Section>
 
-            <Section title="Tài khoản" description="Chủ trọ và các phó quản lý của tổ chức." padded={false}>
+            <Section title="Tài khoản" description="Chủ trọ và các quản lý khu của tổ chức." padded={false}>
               <div style={{ padding: '0 var(--space-4) var(--space-4)' }}>
                 <DataTable columns={userColumns} rows={org.users} caption="Tài khoản trong tổ chức" />
               </div>
@@ -167,7 +167,7 @@ export default function OrganizationDetailPage() {
               open={dialog?.type === 'lock'}
               onClose={() => setDialog(null)}
               title={`Khóa tài khoản ${dialog?.user?.fullName ?? ''}?`}
-              message="Phó quản lý bị đăng xuất ngay và không đăng nhập được cho tới khi mở khóa."
+              message="Quản lý khu bị đăng xuất ngay và không đăng nhập được cho tới khi mở khóa."
               confirmLabel="Khóa"
               tone="danger"
               onConfirm={() => lock.mutateAsync(dialog.user.id)}

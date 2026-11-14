@@ -128,17 +128,38 @@ export function SecretValue({ masked, onReveal }) {
   )
 }
 
-/** Hộp thoại mật khẩu tạm — chỉ hiện đúng 1 lần (tạo tài khoản / cấp lại mật khẩu). */
+/**
+ * Hộp thoại mật khẩu tạm — chỉ hiện đúng 1 lần (tạo tài khoản / cấp lại mật khẩu).
+ * Admin cấp lại cho tài khoản có email (M-14): `temporaryPassword` = null, `deliveredTo` = email đã che — mật khẩu đã gửi tới chính chủ,
+ * admin không thấy.
+ */
 export function TempPasswordDialog({ data, onClose, title = 'Mật khẩu tạm' }) {
+  const delivered = Boolean(data) && !data.temporaryPassword && Boolean(data.deliveredTo)
   return (
     <Modal
       open={Boolean(data)}
       onClose={onClose}
-      title={title}
+      title={delivered ? 'Đã gửi mật khẩu tạm qua email' : title}
       size="sm"
-      footer={<Button onClick={onClose}>Tôi đã lưu lại</Button>}
+      footer={<Button onClick={onClose}>{delivered ? 'Đóng' : 'Tôi đã lưu lại'}</Button>}
     >
-      {data && (
+      {delivered && (
+        <div className={styles.tempPassword}>
+          <Alert tone="info">
+            Mật khẩu tạm đã gửi tới <strong>{data.deliveredTo}</strong>. Quản trị viên không xem được mật khẩu — người dùng làm theo email để đăng nhập.
+          </Alert>
+          <div className={styles.credential}>
+            <span className={styles.credentialLabel}>Tên đăng nhập</span>
+            <code className={styles.credentialValue}>{data.username}</code>
+            <CopyButton value={data.username} />
+          </div>
+          <p className={styles.note}>
+            {data.expiresAt ? `Mật khẩu tạm hết hạn lúc ${formatDateTime(data.expiresAt)}. ` : 'Mật khẩu tạm hết hạn sau 72 giờ. '}
+            Người dùng phải đổi mật khẩu ở lần đăng nhập đầu. Mật khẩu cũ đã bị vô hiệu.
+          </p>
+        </div>
+      )}
+      {data && !delivered && (
         <div className={styles.tempPassword}>
           <Alert tone="warning">
             Mật khẩu tạm <strong>chỉ hiện lần này</strong>. Hệ thống không gửi email/SMS — hãy tự gửi cho người dùng.

@@ -2,6 +2,8 @@ import { Building, FileSpreadsheet, MapPin, Plus, Search, TriangleAlert } from '
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { Badge, Button, ButtonLink, Card, CheckboxField, EmptyState, PageHeader, Pagination, QueryView, TextField, Toolbar } from '@/components/ui'
+import { usePermission } from '@/features/auth/AuthContext'
+import { Permission } from '@/features/auth/permissions'
 import { ExportRentersDialog } from '@/features/exports/ExportRentersDialog'
 import { useListParams } from '@/hooks/useListParams'
 import { cx } from '@/lib/cx'
@@ -25,6 +27,7 @@ function GridSkeleton() {
 export default function PropertiesPage() {
   const { params, set, searchInput } = useListParams(DEFAULTS)
   const [exporting, setExporting] = useState(false)
+  const canAdminister = usePermission(Permission.PropertiesAdminister) // tạo khu — chỉ chủ trọ (M01 ID-BR-28)
   const query = usePropertyList({
     search: params.search || undefined,
     includeArchived: params.archived || undefined,
@@ -42,9 +45,11 @@ export default function PropertiesPage() {
             <Button variant="secondary" icon={FileSpreadsheet} onClick={() => setExporting(true)}>
               Xuất người thuê
             </Button>
-            <ButtonLink to="/properties/new" icon={Plus}>
-              Tạo khu
-            </ButtonLink>
+            {canAdminister && (
+              <ButtonLink to="/properties/new" icon={Plus}>
+                Tạo khu
+              </ButtonLink>
+            )}
           </>
         }
       />
@@ -62,8 +67,10 @@ export default function PropertiesPage() {
           <Card>
             <EmptyState
               icon={Building}
-              title={params.search ? 'Không tìm thấy khu trọ phù hợp' : 'Chưa có khu trọ nào'}
-              description={params.search ? 'Thử từ khóa khác.' : 'Tạo khu trọ đầu tiên để bắt đầu quản lý phòng.'}
+              title={params.search ? 'Không tìm thấy khu trọ phù hợp' : canAdminister ? 'Chưa có khu trọ nào' : 'Bạn chưa được giao khu nào'}
+              description={
+                params.search ? 'Thử từ khóa khác.' : canAdminister ? 'Tạo khu trọ đầu tiên để bắt đầu quản lý phòng.' : 'Liên hệ chủ trọ để được giao khu quản lý.'
+              }
             />
           </Card>
         }

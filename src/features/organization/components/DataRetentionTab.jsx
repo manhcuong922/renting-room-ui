@@ -77,7 +77,7 @@ function RetentionForm({ data }) {
 }
 
 /**
- * Thời gian giữ dữ liệu người thuê (members.md#thời-gian-giữ-dữ-liệu-người-thuê). Chủ trọ sửa; phó quản lý chỉ xem.
+ * Thời gian giữ dữ liệu người thuê (members.md#thời-gian-giữ-dữ-liệu-người-thuê). Chủ trọ sửa; quản lý khu chỉ xem.
  * Ẩn danh ngay một hồ sơ: nút "Ẩn danh" ở hồ sơ người thuê.
  */
 export function DataRetentionTab() {

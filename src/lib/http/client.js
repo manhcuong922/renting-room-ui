@@ -6,6 +6,7 @@
 //   - 409 IDEMPOTENCY_REQUEST_IN_PROGRESS → chờ Retry-After, gửi lại cùng Idempotency-Key.
 //   - Lỗi trả về luôn là ApiError (ProblemDetails đã chuẩn hóa).
 import { env } from '@/config/env'
+import { burnIdempotencyKey } from '@/lib/idempotency'
 import { ApiError } from './ApiError'
 import { authEvents } from './authEvents'
 import { tokenStore } from './tokenStore'
@@ -35,8 +36,8 @@ function buildUrl(path, query) {
   return url
 }
 
-function timeoutSignal(signal) {
-  const timeout = AbortSignal.timeout(env.requestTimeoutMs)
+function timeoutSignal(signal, timeoutMs = env.requestTimeoutMs) {
+  const timeout = AbortSignal.timeout(timeoutMs)
   if (!signal) return timeout
   return typeof AbortSignal.any === 'function' ? AbortSignal.any([signal, timeout]) : signal
 }
@@ -72,7 +73,7 @@ async function parseBody(response) {
   return response.blob()
 }
 
-async function send(path, { method, query, body, headers, idempotencyKey, accessToken, signal }) {
+async function send(path, { method, query, body, headers, idempotencyKey, accessToken, signal, timeoutMs }) {
   const finalHeaders = new Headers({ Accept: 'application/json', ...headers })
   let payload = body
   if (body !== undefined && !(body instanceof FormData) && !(body instanceof Blob)) {
@@ -87,7 +88,7 @@ async function send(path, { method, query, body, headers, idempotencyKey, access
       method,
       headers: finalHeaders,
       body: payload,
-      signal: timeoutSignal(signal),
+      signal: timeoutSignal(signal, timeoutMs),
       // Xác thực bằng Bearer header, KHÔNG dùng cookie → không bao giờ gửi cookie (chặn đường CSRF).
       // Cũng khớp CORS của BE (không bật AllowCredentials).
       credentials: 'omit',
@@ -179,6 +180,7 @@ function handleGlobalError(error) {
  * @param {boolean} [options.auth=true]               false cho login/refresh/logout
  * @param {'blob'} [options.responseType]             'blob' → trả { blob, filename } để tải file
  * @param {AbortSignal} [options.signal]
+ * @param {number} [options.timeoutMs=env.requestTimeoutMs]  Lệnh hàng loạt truyền env.bulkRequestTimeoutMs
  */
 export async function request(path, options = {}) {
   const { method = 'GET', auth = true, signal, responseType, ...rest } = options
@@ -215,8 +217,15 @@ export async function request(path, options = {}) {
     }
 
     if (auth) handleGlobalError(error)
+    if (rest.idempotencyKey && isRejectedCommand(error)) burnIdempotencyKey(rest.idempotencyKey)
     throw error
   }
+}
+
+// Lệnh bị server từ chối (4xx) nên không ghi gì ⇒ key không còn ý nghĩa chống trùng, lần gửi sau phải dùng key mới (L-22).
+// Giữ key khi: lỗi mạng / 5xx (lệnh có thể đã chạy — retry cùng key để không tạo trùng); 409 đang xử lý (chờ kết quả của chính lệnh này).
+function isRejectedCommand(error) {
+  return error.status >= 400 && error.status < 500 && error.code !== 'IDEMPOTENCY_REQUEST_IN_PROGRESS'
 }
 
 export const http = {

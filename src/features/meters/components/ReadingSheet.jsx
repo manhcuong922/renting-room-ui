@@ -134,7 +134,10 @@ export function ReadingSheet({ propertyId, billingMonth, rows: allRows, view }) 
             <div className={styles.sub}>{formatDate(r.previous.readingDate)}</div>
           </div>
         ) : (
-          '—'
+          // Số đầu kỳ = chỉ số chốt kỳ liền trước (MT-BR-12, H-03): chưa nhập / đã hủy ⇒ phiếu kỳ này báo thiếu chỉ số.
+          <div>
+            —<div className={styles.warning}>Thiếu chỉ số chốt kỳ trước — nhập ở lưới tháng trước</div>
+          </div>
         ),
     },
     {

@@ -9,6 +9,12 @@ import { formatMoney, todayVN } from '@/lib/format'
 
 const paidAtError = (date) => (!date ? 'Chọn ngày thu.' : date > todayVN() ? 'Ngày thu không ở tương lai.' : null)
 const PAYMENT_CODE_FIELDS = { PAYMENT_EXCEEDS_DEBT: 'amount', INVALID_PAID_AT: 'paidAt', NOTHING_TO_WRITE_OFF: 'amount' }
+const COLLECTED_CODE_FIELDS = {
+  PAYMENT_EXCEEDS_DEBT: 'amount',
+  COLLECTED_AMOUNT_UNCHANGED: 'amount',
+  COLLECTED_BELOW_REFUNDED: 'amount',
+  INVALID_PAID_AT: 'paidAt',
+}
 
 function MoneyReceivedFields({ form }) {
   return (
@@ -157,6 +163,70 @@ export function WriteOffDialog({ invoice, onClose }) {
           <TextAreaField label="Lý do bỏ nợ" required rows={2} maxLength={500} {...form.field('reason')} />
         </>
       )}
+    </FormDialog>
+  )
+}
+
+/**
+ * Sửa ô "Đã thu" của hóa đơn (payments.md#sửa-số-đã-thu-09112026) — người dùng chỉ gõ số mới, không phải biết phiếu thu.
+ * Tăng ⇒ ghi thêm phần chênh (ngày + cách thu); giảm ⇒ lý do bắt buộc, app tự đảo phiếu thu mới nhất rồi ghi lại phần giữ.
+ * Quản lý khu không giảm được tiền thu trước tháng trước (403 COLLECTED_PERIOD_LOCKED — hiện ở đầu hộp thoại).
+ */
+export function EditCollectedDialog({ invoice, onClose }) {
+  const toast = useToast()
+  const invalidate = useInvalidate()
+  const idem = useIdempotencyKey()
+  const current = invoice.collectedAmount ?? 0
+  const max = current + (invoice.outstanding ?? 0)
+  return (
+    <FormDialog
+      title={`Sửa số đã thu — ${invoice.invoiceNo ?? 'phiếu'}`}
+      description={`Đang ghi đã thu ${formatMoney(current)} / tổng ${formatMoney(invoice.totalAmount)}. Gõ số đúng — app tự ghi thêm hoặc trừ bớt.`}
+      initial={{ amount: current, method: 'Cash', paidAt: todayVN(), reason: '' }}
+      validate={(v) => ({
+        amount: v.amount === null || v.amount < 0 ? 'Nhập số tiền (0 nếu chưa thu).' : v.amount > max ? `Không lớn hơn ${formatMoney(max)}.` : v.amount === current ? 'Số mới bằng số đang ghi.' : null,
+        paidAt: v.amount > current ? paidAtError(v.paidAt) : null,
+        reason: v.amount !== null && v.amount < current && !v.reason.trim() ? 'Giảm số đã thu phải ghi lý do.' : null,
+      })}
+      codeFields={COLLECTED_CODE_FIELDS}
+      submitLabel="Lưu"
+      onClose={onClose}
+      onSubmit={async (v) => {
+        const increase = v.amount > current
+        const body = {
+          amount: v.amount,
+          expectedAmount: current,
+          reason: blankToNull(v.reason),
+          paidAt: increase ? v.paidAt : null,
+          method: increase ? v.method : null,
+        }
+        await paymentsApi.editCollected(invoice.id, body, { idempotencyKey: idem.keyFor(body) })
+        idem.reset()
+        await invalidate(...PAYMENT_AFFECTED)
+        toast.success(increase ? `Đã ghi thêm ${formatMoney(v.amount - current)}.` : `Đã giảm số đã thu còn ${formatMoney(v.amount)}.`)
+      }}
+    >
+      {(form) => {
+        const amount = form.values.amount ?? current
+        return (
+          <>
+            <MoneyField label="Số đã thu" required {...form.field('amount', { type: 'value' })} />
+            {amount > current && (
+              <>
+                <Alert tone="info">Ghi thêm {formatMoney(amount - current)}.</Alert>
+                <SelectField label="Hình thức" options={toOptions(PAYMENT_METHOD_LABELS)} {...form.field('method')} />
+                <DateField label="Ngày thu" required {...form.field('paidAt')} />
+              </>
+            )}
+            {amount < current && (
+              <>
+                <Alert tone="warning">Giảm {formatMoney(current - amount)} — được ghi vào lịch sử sửa (ai sửa, lý do) và file Excel thu tiền.</Alert>
+                <TextAreaField label="Lý do" required maxLength={500} rows={2} {...form.field('reason')} />
+              </>
+            )}
+          </>
+        )
+      }}
     </FormDialog>
   )
 }

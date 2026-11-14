@@ -139,7 +139,7 @@ export function LessorForm({ lessor, prefill, onSave, onReveal, submitLabel = 'L
   )
 }
 
-/** Xem bên cho thuê (chỉ đọc) — khu đang dùng thông tin chủ trọ, hoặc phó quản lý xem thông tin chủ trọ. */
+/** Xem bên cho thuê (chỉ đọc) — khu đang dùng thông tin chủ trọ, hoặc quản lý khu xem thông tin chủ trọ. */
 export function LessorSummary({ lessor, onReveal }) {
   const individual = lessor.type === 'Individual'
   return (

@@ -6,7 +6,7 @@ import { useAuth, usePermission } from './AuthContext'
 
 /**
  * Ẩn phần giao diện khi không đủ quyền.
- *   <Can permission={Permission.MembersManage}><Button>Thêm phó quản lý</Button></Can>
+ *   <Can permission={Permission.MembersManage}><Button>Thêm quản lý khu</Button></Can>
  */
 export function Can({ permission, fallback = null, children }) {
   return usePermission(permission) ? children : fallback

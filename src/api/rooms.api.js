@@ -1,3 +1,4 @@
+import { env } from '@/config/env'
 import { http } from '@/lib/http/client'
 
 // docs/api/rooms.md
@@ -7,7 +8,7 @@ export const roomsApi = {
   create: (propertyId, body, { idempotencyKey }) =>
     http.post(`/properties/${propertyId}/rooms`, body, { idempotencyKey }),
   bulkCreate: (propertyId, body, { idempotencyKey }) =>
-    http.post(`/properties/${propertyId}/rooms/bulk`, body, { idempotencyKey }),
+    http.post(`/properties/${propertyId}/rooms/bulk`, body, { idempotencyKey, timeoutMs: env.bulkRequestTimeoutMs }), // L-23
   update: (id, body) => http.put(`/rooms/${id}`, body),
   // Áp giá niêm yết mới cho HĐ đang hiệu lực của phòng — từ kỳ chưa lập phiếu đầu tiên.
   applyListedRent: (id) => http.post(`/rooms/${id}/apply-listed-rent`),

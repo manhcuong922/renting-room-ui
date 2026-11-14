@@ -12,8 +12,9 @@ import { Can } from '@/features/auth/access'
 import { useCanWriteOff } from '@/features/auth/AuthContext'
 import { Permission } from '@/features/auth/permissions'
 import { formatReading } from '@/features/meters/meterRules'
+import { useBillingGaps } from '@/features/contracts/hooks'
 import { ContractBalanceDialog } from '@/features/payments/components/ContractBalanceDialog'
-import { PayAndWriteOffDialog, RecordPaymentDialog, WriteOffDialog } from '@/features/payments/components/PaymentDialogs'
+import { EditCollectedDialog, PayAndWriteOffDialog, RecordPaymentDialog, WriteOffDialog } from '@/features/payments/components/PaymentDialogs'
 import { PaymentHistory } from '@/features/payments/components/PaymentHistory'
 import { InvoiceBadges } from '../components/InvoiceBadges'
 import { AddLineDialog, ConfirmRefundDialog, EditLineDialog } from '../components/LineDialogs'
@@ -90,6 +91,9 @@ function finalPeriodText(fp) {
   const rent = fp.rentBilledInvoiceNo ? `đã thu ở hóa đơn ${fp.rentBilledInvoiceNo}` : 'thu ở hóa đơn này'
   return `Ở đến ${formatDate(fp.stayedUntil)} · Kỳ ${formatDate(fp.periodStart)} – ${formatDate(fp.periodEnd)} (${fp.days}/${fp.periodDays} ngày) · Tính: ${charge} · Tiền phòng kỳ này: ${rent}`
 }
+
+/** Hộp thoại xóa nháp / hủy phiếu nối tiếp khoảng ngắt (BL-BR-45). */
+const gapLostText = (gapText) => `Phiếu này nối tiếp ${gapText}: khoảng đó sẽ mất, lập lại phiếu kỳ này phải chọn lại “Bỏ qua các kỳ chưa lập”.`
 
 function LineRow({ line, draft, onEdit, onReset, onDelete }) {
   const manual = !line.isSystem
@@ -209,6 +213,11 @@ export default function InvoiceDetailPage() {
   const [busy, setBusy] = useState(null)
   const canWriteOff = useCanWriteOff()
   const query = useQuery({ queryKey: queryKeys.invoices.detail(id), queryFn: ({ signal }) => invoicesApi.get(id, { signal }) })
+  // Phiếu nối tiếp một khoảng ngắt (BL-BR-45): xóa nháp / hủy phiếu ⇒ khoảng ngắt mất theo — chỉ cần biết khi còn xóa / hủy được.
+  const summary = query.data?.summary
+  const gaps = useBillingGaps(summary?.contractId, { enabled: Boolean(summary) && (isDraft(summary) || canVoid(summary)) })
+  const resumedGap = gaps.data?.find((g) => g.resumedInvoiceId === summary.id)
+  const gapText = resumedGap ? `khoảng thu ngoài hệ thống ${formatDate(resumedGap.fromDate)} – ${formatDate(resumedGap.toDate)} (${resumedGap.periodCount} kỳ)` : null
 
   const close = () => setDialog(null)
   // Thay luôn dữ liệu đang hiện bằng chi tiết server trả về; danh sách / số tổng hợp / thẻ phòng tải lại sau.
@@ -237,7 +246,10 @@ export default function InvoiceDetailPage() {
   }
   // ConfirmDialog tự báo lỗi và giữ hộp thoại khi thất bại → ném lỗi ra cho nó, chỉ xử lý phần thành công ở đây.
   const confirmAction = async (action, success, after) => {
-    const detail = await action()
+    const detail = await action().catch((error) => {
+      if (error.code === 'CONCURRENCY_CONFLICT') void query.refetch() // phiếu vừa đổi ở nơi khác ⇒ nạp version mới để làm lại
+      throw error
+    })
     if (detail?.summary) apply(detail)
     toast.success(success)
     after?.()
@@ -328,6 +340,11 @@ export default function InvoiceDetailPage() {
                 </Alert>
               )}
               {invoice.finalPeriod && <Alert tone="info">{finalPeriodText(invoice.finalPeriod)}</Alert>}
+              {gapText && (
+                <Alert tone="info">
+                  Phiếu này nối tiếp {gapText} — các kỳ đó không có phiếu. {draft ? 'Xóa nháp' : 'Hủy phiếu'} thì khoảng này mất, các kỳ trở lại “chưa lập phiếu”.
+                </Alert>
+              )}
               {s.needsResend && <Alert tone="warning">Hóa đơn đã chốt vừa được tính lại do điều chỉnh chỉ số — gửi lại cho người thuê rồi bấm “Đã gửi lại”.</Alert>}
               {draft && s.isStale && <Alert tone="warning">Dữ liệu nguồn (chỉ số, giá, hợp đồng) đã đổi sau khi lập nháp — bấm Tính lại trước khi chốt.</Alert>}
               {errors.length > 0 && (
@@ -380,7 +397,21 @@ export default function InvoiceDetailPage() {
                   { label: 'Ngày lập', value: invoice.issueDate ? formatDate(invoice.issueDate) : 'Chưa chốt' },
                   { label: 'Hạn thanh toán', hidden: !s.dueDate, value: formatDate(s.dueDate) },
                   // "Đã thu" = thực thu (collectedAmount); paidAmount = thực thu + bỏ nợ, chỉ dùng tính còn nợ.
-                  { label: 'Đã thu', hidden: !isFinalized(s), value: formatMoney(s.collectedAmount ?? s.paidAmount) },
+                  {
+                    label: 'Đã thu',
+                    hidden: !isFinalized(s),
+                    value: (
+                      <>
+                        {formatMoney(s.collectedAmount ?? s.paidAmount)}
+                        {/* Sửa thẳng số đã thu (PM-BR-38) — không cho khi nợ đã chuyển vào hóa đơn trả phòng hoặc phiếu chờ hoàn tiền. */}
+                        {!isCarried(s) && s.totalAmount >= 0 && (
+                          <Button size="sm" variant="ghost" icon={Pencil} aria-label="Sửa số đã thu" onClick={() => setDialog({ type: 'editCollected' })}>
+                            Sửa
+                          </Button>
+                        )}
+                      </>
+                    ),
+                  },
                   { label: 'Đã bỏ nợ', hidden: !isFinalized(s) || !(s.writtenOffAmount > 0), value: formatMoney(s.writtenOffAmount) },
                   // BL-BR-41: phần nợ chuyển vào hóa đơn trả phòng — nằm trong paidAmount nhưng không phải tiền đã thu.
                   {
@@ -430,7 +461,7 @@ export default function InvoiceDetailPage() {
                             draft={draft}
                             onEdit={(l) => setDialog({ type: 'editLine', line: l })}
                             onDelete={(l) => setDialog({ type: 'deleteLine', line: l })}
-                            onReset={(l) => run(`reset-${l.id}`, () => invoicesApi.resetLine(s.id, l.id), 'Đã bỏ sửa tay — dòng về số hệ thống tính.')}
+                            onReset={(l) => run(`reset-${l.id}`, () => invoicesApi.resetLine(s.id, l.id, s.version), 'Đã bỏ sửa tay — dòng về số hệ thống tính.')}
                           />
                         ))}
                       </Fragment>
@@ -543,6 +574,7 @@ export default function InvoiceDetailPage() {
             {dialog?.type === 'editLine' && <EditLineDialog invoice={invoice} line={dialog.line} onSaved={apply} onClose={close} />}
             {dialog?.type === 'pay' && <RecordPaymentDialog contractId={s.contractId} invoice={s} maxAmount={s.outstanding} onClose={close} />}
             {dialog?.type === 'payAndWriteOff' && <PayAndWriteOffDialog invoice={s} onClose={close} />}
+            {dialog?.type === 'editCollected' && <EditCollectedDialog invoice={s} onClose={close} />}
             {dialog?.type === 'writeOff' && <WriteOffDialog invoice={s} onClose={close} />}
             {dialog?.type === 'balance' && <ContractBalanceDialog contractId={s.contractId} onClose={close} />}
             {dialog?.type === 'refund' && <ConfirmRefundDialog invoice={invoice} onSaved={apply} onClose={close} />}
@@ -552,7 +584,7 @@ export default function InvoiceDetailPage() {
                 initial={{ note: invoice.note ?? '' }}
                 onClose={close}
                 onSubmit={async (v) => {
-                  apply(await invoicesApi.updateNote(s.id, v.note.trim() || null))
+                  apply(await invoicesApi.updateNote(s.id, v.note.trim() || null, s.version))
                   toast.success('Đã lưu ghi chú.')
                 }}
               >
@@ -584,7 +616,7 @@ export default function InvoiceDetailPage() {
               message={dialog?.line ? `"${dialog.line.description}" ${formatMoney(dialog.line.amount)} sẽ bị xóa khỏi phiếu${dialog.line.roomChargeId ? ' và khoản phát sinh tương ứng của phòng bị hủy' : ''}.` : ''}
               confirmLabel="Xóa dòng"
               tone="danger"
-              onConfirm={() => confirmAction(() => invoicesApi.resetLine(s.id, dialog.line.id), 'Đã xóa dòng.')}
+              onConfirm={() => confirmAction(() => invoicesApi.resetLine(s.id, dialog.line.id, s.version), 'Đã xóa dòng.')}
             />
             <ConfirmDialog
               open={dialog?.type === 'finalize'}
@@ -594,20 +626,21 @@ export default function InvoiceDetailPage() {
               confirmLabel="Chốt phiếu"
               onConfirm={async () => {
                 // Lỗi chốt (DRAFT_STALE, INVOICE_HAS_ISSUES) báo bằng thông báo nổi và đóng hộp thoại để người dùng xử lý trên phiếu.
-                await run('finalize', () => invoicesApi.finalize(s.id), 'Đã chốt phiếu.')
+                await run('finalize', () => invoicesApi.finalize(s.id, s.version), 'Đã chốt phiếu.')
               }}
             />
             <ConfirmDialog
               open={dialog?.type === 'delete'}
               onClose={close}
               title="Xóa phiếu nháp?"
-              message="Phiếu nháp bị xóa hẳn; khoản phát sinh trên phiếu quay về chờ. Chỉ xóa được phiếu mới nhất của hợp đồng."
+              message={`Phiếu nháp bị xóa hẳn; khoản phát sinh trên phiếu quay về chờ. Chỉ xóa được phiếu mới nhất của hợp đồng.${gapText ? ` ${gapLostText(gapText)}` : ''}`}
               confirmLabel="Xóa nháp"
               tone="danger"
               onConfirm={async () => {
                 await invoicesApi.remove(s.id)
                 queryClient.removeQueries({ queryKey: queryKeys.invoices.detail(id) })
                 await queryClient.invalidateQueries({ queryKey: queryKeys.invoices.all })
+                if (resumedGap) void queryClient.invalidateQueries({ queryKey: queryKeys.contracts.all })
                 toast.success('Đã xóa phiếu nháp.')
                 navigate('/invoices', { replace: true })
               }}
@@ -616,12 +649,14 @@ export default function InvoiceDetailPage() {
               open={dialog?.type === 'void'}
               onClose={close}
               title={`Hủy phiếu ${s.invoiceNo ?? ''}?`}
-              message="Chỉ hủy được phiếu chưa thu tiền, là phiếu mới nhất của hợp đồng (hóa đơn trả phòng chưa hủy luôn là mới nhất) và hợp đồng chưa kết thúc. Hủy xong lập lại được; chỉ số của kỳ được mở khóa."
+              message={`Chỉ hủy được phiếu chưa thu tiền, là phiếu mới nhất của hợp đồng (hóa đơn trả phòng chưa hủy luôn là mới nhất) và hợp đồng chưa kết thúc. Hủy xong lập lại được; chỉ số của kỳ được mở khóa.${gapText ? ` ${gapLostText(gapText)}` : ''}`}
               reasonLabel="Lý do hủy"
               reasonMaxLength={300}
               confirmLabel="Hủy phiếu"
               tone="danger"
-              onConfirm={(reason) => confirmAction(() => invoicesApi.void(s.id, reason), 'Đã hủy phiếu.')}
+              onConfirm={(reason) =>
+                confirmAction(() => invoicesApi.void(s.id, reason), 'Đã hủy phiếu.', resumedGap ? () => void queryClient.invalidateQueries({ queryKey: queryKeys.contracts.all }) : undefined)
+              }
             />
             <ConfirmDialog
               open={dialog?.type === 'cancelRefund'}

@@ -1,8 +1,9 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { CheckCheck, ListPlus, Plus, ReceiptText, RefreshCw } from 'lucide-react'
+import { CheckCheck, FileSpreadsheet, ListPlus, Plus, ReceiptText, RefreshCw } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { invoicesApi, queryKeys } from '@/api'
+import { ExportInvoicesDialog } from '@/features/exports/ExportInvoicesDialog'
 import { Alert, Button, Card, CheckboxField, ConfirmDialog, DataTable, EmptyState, FormDialog, PageHeader, Pagination, QueryView, SelectField, TextField, Toolbar, useToast } from '@/components/ui'
 import { INVOICE_STATUS, toOptions } from '@/constants/enums'
 import { usePropertyOptions, usePropertyRooms } from '@/features/shared/queries'
@@ -178,11 +179,16 @@ export default function InvoicesPage() {
     <>
       <PageHeader
         title="Phiếu tiền phòng"
-        description="Tạo phiếu nháp theo tháng, kiểm tra, chốt rồi thu tiền. Sai sau khi chốt thì hủy phiếu và lập lại."
+        description="Tạo phiếu nháp theo tháng, kiểm tra, chốt rồi thu tiền. Sai sau khi chốt thì hủy phiếu và lập lại; ghi nhầm tiền đã thu thì sửa ô “Đã thu” trên phiếu."
         actions={
-          <Button icon={Plus} onClick={() => setDialog({ type: 'generate' })}>
-            Tạo phiếu
-          </Button>
+          <>
+            <Button variant="secondary" icon={FileSpreadsheet} onClick={() => setDialog({ type: 'export' })}>
+              Xuất Excel
+            </Button>
+            <Button icon={Plus} onClick={() => setDialog({ type: 'generate' })}>
+              Tạo phiếu
+            </Button>
+          </>
         }
       />
 
@@ -287,6 +293,9 @@ export default function InvoicesPage() {
         >
           {(form) => <CheckboxField label="Bỏ các ô sửa tay" description="Tính lại từ đầu: mọi ô đã sửa tay trở về số hệ thống tính." {...form.field('discardEdits', { type: 'checkbox' })} />}
         </FormDialog>
+      )}
+      {dialog?.type === 'export' && (
+        <ExportInvoicesDialog presetPropertyIds={params.propertyId ? [params.propertyId] : []} presetMonth={billingMonth} onClose={() => setDialog(null)} />
       )}
       {dialog?.type === 'result' && <BulkResultDialog title={dialog.title} summary={dialog.summary} rows={dialog.rows} onClose={() => setDialog(null)} />}
       <ConfirmDialog

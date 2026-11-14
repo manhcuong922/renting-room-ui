@@ -65,7 +65,7 @@ export default function OrganizationsPage() {
     <>
       <PageHeader
         title="Tổ chức chủ trọ"
-        description="Tạo tổ chức, tạm ngưng và quản lý tài khoản chủ trọ / phó quản lý."
+        description="Tạo tổ chức, tạm ngưng và quản lý tài khoản chủ trọ / quản lý khu."
         actions={
           <Button icon={Plus} onClick={() => setCreating(true)}>
             Tạo tổ chức

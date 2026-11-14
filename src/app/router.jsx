@@ -74,7 +74,7 @@ export const router = createBrowserRouter([
                   {
                     path: 'properties/new',
                     element: <PropertyCreatePage />,
-                    handle: { title: 'Tạo khu trọ', permission: Permission.PropertiesManage },
+                    handle: { title: 'Tạo khu trọ', permission: Permission.PropertiesAdminister },
                   },
                   {
                     path: 'properties/:id',

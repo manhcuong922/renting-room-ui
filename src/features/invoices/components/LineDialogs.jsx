@@ -124,7 +124,7 @@ export function AddLineDialog({ invoice, preset, onSaved, onClose }) {
             ...linePricing(v),
             note: v.note.trim(),
             ...(refund ? { sourceInvoiceId: v.sourceInvoiceId } : settlement(v)),
-          })
+          }, summary.version)
           onSaved(detail)
           toast.success('Đã thêm dòng vào phiếu.')
           return true
@@ -171,6 +171,27 @@ export function AddLineDialog({ invoice, preset, onSaved, onClose }) {
 }
 
 /**
+ * Body PUT dòng. Dòng hệ thống: chỉ gửi những gì người dùng THỰC SỰ đổi để BE tự tính phần còn lại (M-04):
+ *  - đơn giá chỉ gửi khi đổi — đơn giá trên màn là bình quân của dòng giá bậc, gửi lại sẽ làm BE nhân với giá bình quân thay vì chia bậc lại;
+ *  - đổi số lượng / đơn giá mà không sửa thành tiền ⇒ gửi thành tiền = null để BE tính lại (trước đây thành tiền cũ bị giữ nguyên, lệch số lượng);
+ *  - không đổi gì ngoài ghi chú ⇒ giữ thành tiền hiện tại (kể cả số đã sửa tay trước đó).
+ */
+function editLinePayload({ manual, line, values }) {
+  const note = blankToNull(values.note)
+  if (manual) return { quantity: null, unitPrice: null, amount: values.amount, note }
+
+  const quantityChanged = values.quantity !== line.quantity
+  const unitPriceChanged = values.unitPrice !== line.unitPrice
+  const amountChanged = values.amount !== Math.abs(line.amount)
+  return {
+    quantity: values.quantity,
+    unitPrice: unitPriceChanged ? values.unitPrice : null,
+    amount: amountChanged || !(quantityChanged || unitPriceChanged) ? values.amount : null,
+    note,
+  }
+}
+
+/**
  * Sửa một dòng trên phiếu nháp.
  *  - Dòng hệ thống (tiền phòng, điện nước, dịch vụ): sửa tay số lượng / đơn giá / thành tiền; hệ thống giữ số gốc bên cạnh.
  *    Bỏ trống thành tiền ⇒ = số lượng × đơn giá × hệ số kỳ. Dòng Tiền phòng bắt buộc ghi chú; hóa đơn trả phòng: mọi dòng bắt buộc lý do.
@@ -196,12 +217,7 @@ export function EditLineDialog({ invoice, line, onSaved, onClose }) {
       onClose={onClose}
       onSubmit={async (v, form) => {
         try {
-          const detail = await invoicesApi.editLine(invoice.summary.id, line.id, {
-            quantity: manual ? null : v.quantity,
-            unitPrice: manual ? null : v.unitPrice,
-            amount: v.amount,
-            note: blankToNull(v.note),
-          })
+          const detail = await invoicesApi.editLine(invoice.summary.id, line.id, editLinePayload({ manual, line, values: v }), invoice.summary.version)
           onSaved(detail)
           toast.success('Đã sửa dòng.')
           return true
@@ -226,7 +242,7 @@ export function EditLineDialog({ invoice, line, onSaved, onClose }) {
               <NumberField label="Đơn giá" decimals={2} suffix="đ" {...form.field('unitPrice', { type: 'value' })} />
             </>
           )}
-          <MoneyField label="Thành tiền" required={manual} hint={manual ? undefined : 'Bỏ trống = số lượng × đơn giá × hệ số kỳ'} {...form.field('amount', { type: 'value' })} />
+          <MoneyField label="Thành tiền" required={manual} hint={manual ? undefined : 'Đổi số lượng / đơn giá mà không sửa ô này ⇒ tự tính lại (giá bậc chia lại theo bậc). Bỏ trống = tự tính'} {...form.field('amount', { type: 'value' })} />
           <TextAreaField label={manual || finalInvoice ? 'Lý do' : 'Ghi chú'} required={noteRequired} rows={2} maxLength={300} {...form.field('note')} />
         </>
       )}

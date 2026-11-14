@@ -18,7 +18,7 @@ import {
 import { formatBillingMonth, formatDate, formatDateTime, formatMoney, todayVN } from '@/lib/format'
 import { formatContractTerm } from '../contractRules'
 import { formatCustomValue } from '../contractForm'
-import { useBillingPeriods } from '../hooks'
+import { useBillingGaps, useBillingPeriods } from '../hooks'
 
 // Cảnh báo mềm → nơi xử lý (contracts.md#giấy-tờ--pháp-lý-chỉ-cảnh-báo-09102026).
 function warningAction(w, c, { onSignedDocument }) {
@@ -311,7 +311,31 @@ export function BillingTab({ contract: c }) {
       <QueryView query={query} isEmpty={(d) => d.length === 0} empty={<EmptyState title="Chưa có kỳ thu" />}>
         {(periods) => <DataTable columns={columns} rows={periods} rowKey={(p) => p.start} caption="Kỳ thu" />}
       </QueryView>
+      <BillingGaps contractId={c.id} />
     </Section>
+  )
+}
+
+/** Khoảng ngắt tính tiền (contracts.md — GET /contracts/{id}/billing-gaps): chỉ hiện khi HĐ có khoảng ngắt. */
+function BillingGaps({ contractId }) {
+  const query = useBillingGaps(contractId)
+  if (!query.data?.length) return null
+  const columns = [
+    { key: 'range', header: 'Từ – đến', primary: true, cell: (g) => `${formatDate(g.fromDate)} – ${formatDate(g.toDate)}` },
+    { key: 'count', header: 'Số kỳ', align: 'right', cell: (g) => g.periodCount },
+    {
+      key: 'resumed',
+      header: 'Phiếu nối tiếp',
+      cell: (g) => (g.resumedInvoiceId ? <Link to={`/invoices/${g.resumedInvoiceId}`}>Xem phiếu</Link> : 'Đóng khi thanh lý (xử lý ngoài hệ thống)'),
+    },
+    { key: 'note', header: 'Ghi chú', hideOnMobile: true, cell: (g) => g.note ?? '—' },
+  ]
+  return (
+    <div style={{ marginTop: 'var(--space-4)', display: 'grid', gap: 'var(--space-2)' }}>
+      <h3 style={{ fontSize: 'var(--text-sm)', fontWeight: 700, margin: 0 }}>Khoảng thu ngoài hệ thống</h3>
+      <p style={{ color: 'var(--color-text-muted)', margin: 0 }}>Xóa nháp / hủy phiếu nối tiếp thì khoảng này mất — các kỳ trở lại “chưa lập phiếu”.</p>
+      <DataTable columns={columns} rows={query.data} caption="Khoảng thu ngoài hệ thống" />
+    </div>
   )
 }
 

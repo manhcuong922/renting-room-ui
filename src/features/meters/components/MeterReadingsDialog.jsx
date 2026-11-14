@@ -86,7 +86,7 @@ export function MeterReadingsDialog({ meter, onClose }) {
         title="Hủy chỉ số?"
         message={
           voiding
-            ? `Chỉ số ${formatReading(voiding.value)} ngày ${formatDate(voiding.readingDate)} sẽ không còn trong lịch sử. Phiếu nháp liên quan chuyển "Cần tính lại".`
+            ? `Chỉ số ${formatReading(voiding.value)} ngày ${formatDate(voiding.readingDate)} sẽ không còn trong lịch sử. Phiếu nháp kỳ này và kỳ sau tự tính lại và báo thiếu chỉ số cho tới khi nhập lại ở lưới. Chỉ gõ sai số thì dùng “Sửa”.`
             : ''
         }
         reasonLabel="Lý do hủy"

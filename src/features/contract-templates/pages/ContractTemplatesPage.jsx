@@ -5,6 +5,8 @@ import { Link, useNavigate } from 'react-router'
 import { contractTemplatesApi, queryKeys } from '@/api'
 import { Badge, Button, Card, CheckboxField, EmptyState, Modal, PageHeader, QueryView, SelectField, Spinner, Toolbar } from '@/components/ui'
 import { CONTRACT_TYPE_LABELS, toOptions } from '@/constants/enums'
+import { usePermission } from '@/features/auth/AuthContext'
+import { Permission } from '@/features/auth/permissions'
 import { useListParams } from '@/hooks/useListParams'
 import styles from './ContractTemplatesPage.module.css'
 
@@ -14,6 +16,8 @@ const DEFAULTS = { type: '', archived: false }
 export default function ContractTemplatesPage() {
   const { params, set } = useListParams(DEFAULTS)
   const [choosing, setChoosing] = useState(false)
+  // Mẫu dùng chung mọi khu ⇒ chỉ chủ trọ tạo / sửa (M01 ID-BR-28); quản lý khu xem và dùng khi lập hợp đồng.
+  const canManage = usePermission(Permission.ContractTemplatesManage)
   const filter = { type: params.type || undefined, includeArchived: params.archived || undefined }
   const query = useQuery({
     queryKey: queryKeys.contractTemplates.list(filter),
@@ -26,9 +30,11 @@ export default function ContractTemplatesPage() {
         title="Mẫu hợp đồng"
         description="Tiêu đề, điều khoản và trường tùy biến theo loại hợp đồng. Sửa mẫu không đổi hợp đồng đã kích hoạt; bản nháp nhận nội dung mới ở lần sửa nháp kế tiếp. Điện, nước, dịch vụ khai bằng khoản thu của khu."
         actions={
-          <Button icon={Plus} onClick={() => setChoosing(true)}>
-            Tạo mẫu
-          </Button>
+          canManage && (
+            <Button icon={Plus} onClick={() => setChoosing(true)}>
+              Tạo mẫu
+            </Button>
+          )
         }
       />
 
@@ -53,9 +59,13 @@ export default function ContractTemplatesPage() {
                   {list.map((t) => (
                     <li key={t.id}>
                       <Card as="article" className={styles.card}>
-                        <Link to={`/contract-templates/${t.id}`} className={styles.cardLink}>
+                        {canManage ? (
+                          <Link to={`/contract-templates/${t.id}`} className={styles.cardLink}>
+                            <h3 className={styles.name}>{t.name}</h3>
+                          </Link>
+                        ) : (
                           <h3 className={styles.name}>{t.name}</h3>
-                        </Link>
+                        )}
                         <p className={styles.title}>{t.title}</p>
                         <div className={styles.badges}>
                           <Badge>{t.clauses.length} điều khoản</Badge>

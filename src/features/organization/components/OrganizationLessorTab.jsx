@@ -8,7 +8,7 @@ import { useOrganizationLessor } from '../hooks'
 
 /**
  * Thông tin chủ trọ làm bên cho thuê — khai 1 lần, mọi khu không khai riêng dùng chung (docs/api/properties.md#bên-cho-thuê).
- * Chỉ chủ trọ sửa (PUT /org/lessor); phó quản lý chỉ xem. Lần đầu điền sẵn từ thông tin liên hệ của tổ chức (`prefill`).
+ * Chỉ chủ trọ sửa (PUT /org/lessor); quản lý khu chỉ xem. Lần đầu điền sẵn từ thông tin liên hệ của tổ chức (`prefill`).
  */
 export function OrganizationLessorTab() {
   const toast = useToast()

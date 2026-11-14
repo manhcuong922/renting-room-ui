@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import { propertiesApi, queryKeys } from '@/api'
 import { Alert, Button, ConfirmDialog, useToast } from '@/components/ui'
-import { useCanViewSensitiveData } from '@/features/auth/AuthContext'
+import { useCanViewSensitiveData, usePermission } from '@/features/auth/AuthContext'
+import { Permission } from '@/features/auth/permissions'
 import { useInvalidate } from '@/hooks/useAction'
 import { LessorForm, LessorSummary } from './LessorForm'
 
@@ -21,6 +22,7 @@ function CompletenessAlert({ lessor }) {
  * Tab Bên cho thuê của khu (docs/api/properties.md#bên-cho-thuê). Mặc định khu dùng **thông tin chủ trọ** (khai 1 lần ở
  * Cài đặt tổ chức, `lessorInherited: true`). Chỉ khai riêng khi khác chủ trọ (công ty quản lý, người được ủy quyền).
  * Sửa / bỏ không ảnh hưởng HĐ đã kích hoạt (HĐ giữ bản chụp lúc kích hoạt).
+ * Chỉ chủ trọ sửa (gồm người ký thay + giấy ủy quyền — M01 ID-BR-28); quản lý khu chỉ xem và in hợp đồng theo.
  */
 export function PropertyLessorTab({ property }) {
   const toast = useToast()
@@ -32,6 +34,8 @@ export function PropertyLessorTab({ property }) {
   const usesOwn = lessor && !lessorInherited
   const reveal = canViewSensitive ? () => propertiesApi.revealLessorIdNumber(property.id) : undefined
 
+  const canManage = usePermission(Permission.PropertiesAdminister)
+
   const refresh = () => invalidate(queryKeys.properties.detail(property.id), queryKeys.properties.all)
 
   const save = async (body) => {
@@ -40,6 +44,24 @@ export function PropertyLessorTab({ property }) {
     setEditingOwn(false)
     toast.success('Đã lưu bên cho thuê riêng của khu.')
   }
+
+  if (!canManage)
+    return (
+      <div style={{ display: 'grid', gap: 'var(--space-4)' }}>
+        <Alert tone="info">
+          {usesOwn ? 'Khu này khai bên cho thuê riêng (khác chủ trọ).' : 'Khu dùng thông tin chủ trọ làm bên cho thuê.'} Chỉ chủ trọ sửa — kể cả người
+          ký thay và giấy ủy quyền in trên hợp đồng.
+        </Alert>
+        {lessor ? (
+          <>
+            <CompletenessAlert lessor={lessor} />
+            <LessorSummary lessor={lessor} onReveal={reveal} />
+          </>
+        ) : (
+          <Alert tone="warning">Chủ trọ chưa khai bên cho thuê — chưa in được hợp đồng đầy đủ.</Alert>
+        )}
+      </div>
+    )
 
   if (usesOwn || editingOwn) {
     return (

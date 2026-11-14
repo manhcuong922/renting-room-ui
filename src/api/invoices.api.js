@@ -1,4 +1,8 @@
+import { env } from '@/config/env'
 import { http } from '@/lib/http/client'
+
+// Lệnh hàng loạt chạy lâu hơn timeout mặc định (L-23).
+const BULK = { timeoutMs: env.bulkRequestTimeoutMs }
 
 // docs/api/invoices.md — phiếu tiền phòng: Nháp → Chốt → thu tiền; sai sau khi chốt thì Hủy rồi lập lại.
 // Mọi lệnh sửa / chốt / hủy / hoàn tiền trả 200 + chi tiết phiếu sau khi đổi (dùng luôn, không gọi lại).
@@ -12,25 +16,27 @@ export const invoicesApi = {
 
   // → { created, recalculated, withIssues, gapsCreated, skipped: [{ contractId, contractNo, roomCode, reason, unbilledPeriods? }] }
   // body.skipUnbilledPeriods: true ⇒ ghi khoảng ngắt cho các kỳ chưa lập (đã thu ngoài hệ thống) rồi tạo phiếu kỳ này.
-  generate: (body, { idempotencyKey } = {}) => http.post('/invoices/generate', body, { idempotencyKey }),
+  generate: (body, { idempotencyKey } = {}) => http.post('/invoices/generate', body, { idempotencyKey, ...BULK }),
   // Mọi khu (propertyIds null) → mảng [{ propertyId, propertyCode, result, errorCode }]
-  generateBulk: (body, { idempotencyKey } = {}) => http.post('/invoices/generate-bulk', body, { idempotencyKey }),
+  generateBulk: (body, { idempotencyKey } = {}) => http.post('/invoices/generate-bulk', body, { idempotencyKey, ...BULK }),
   // { invoiceIds } | { propertyId, billingMonth, roomIds, floor } | { propertyId, staleOnly } (+ keepManualEdits) → { recalculated, withIssues, notDraft }
-  recalculate: (body) => http.post('/invoices/recalculate', body),
+  recalculate: (body) => http.post('/invoices/recalculate', body, BULK),
 
+  // Thao tác trên MỘT phiếu nháp bắt buộc gửi `version` = summary.version của lần mở phiếu đang hiện (invoices.md, 05/11/2026):
+  // phiếu đã đổi ở tab / máy khác ⇒ 409 CONCURRENCY_CONFLICT, tải lại rồi làm lại. Response trả chi tiết có version mới.
   // Sửa tay dòng hệ thống / sửa dòng nhập tay.
-  editLine: (id, lineId, body) => http.put(`/invoices/${id}/lines/${lineId}`, body),
+  editLine: (id, lineId, body, version) => http.put(`/invoices/${id}/lines/${lineId}`, { ...body, version }),
   // Dòng hệ thống: bỏ sửa tay; dòng nhập tay: xóa.
-  resetLine: (id, lineId) => http.delete(`/invoices/${id}/lines/${lineId}`),
+  resetLine: (id, lineId, version) => http.delete(`/invoices/${id}/lines/${lineId}?version=${encodeURIComponent(version)}`),
   // Phụ thu / giảm trừ / hoàn trả (hoàn trả cần sourceInvoiceId).
-  addManualLine: (id, body) => http.post(`/invoices/${id}/manual-lines`, body),
+  addManualLine: (id, body, version) => http.post(`/invoices/${id}/manual-lines`, { ...body, version }),
   // Cùng một phụ thu / giảm trừ cho nhiều phiếu nháp → { added, results: [{ invoiceId, roomId, roomCode, success, errorCode, message }] }
-  bulkManualLines: (body, { idempotencyKey } = {}) => http.post('/invoices/manual-lines', body, { idempotencyKey }),
-  updateNote: (id, note) => http.put(`/invoices/${id}/note`, { note }),
+  bulkManualLines: (body, { idempotencyKey } = {}) => http.post('/invoices/manual-lines', body, { idempotencyKey, ...BULK }),
+  updateNote: (id, note, version) => http.put(`/invoices/${id}/note`, { note, version }),
 
-  finalize: (id, { idempotencyKey } = {}) => http.post(`/invoices/${id}/finalize`, undefined, { idempotencyKey }),
+  finalize: (id, version, { idempotencyKey } = {}) => http.post(`/invoices/${id}/finalize`, { version }, { idempotencyKey }),
   // → mảng [{ invoiceId, success, invoiceNo, errorCode, message }]
-  finalizeBatch: (invoiceIds, { idempotencyKey } = {}) => http.post('/invoices/finalize-batch', { invoiceIds }, { idempotencyKey }),
+  finalizeBatch: (invoiceIds, { idempotencyKey } = {}) => http.post('/invoices/finalize-batch', { invoiceIds }, { idempotencyKey, ...BULK }),
   void: (id, reason) => http.post(`/invoices/${id}/void`, { reason }),
   // Xóa nháp → 204
   remove: (id) => http.delete(`/invoices/${id}`),

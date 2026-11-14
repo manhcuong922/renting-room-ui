@@ -89,6 +89,8 @@ function fallbackCode(status) {
 // Câu thông báo cho người dùng theo bảng "Xử lý chung trong interceptor".
 export function getErrorMessage(error) {
   if (!(error instanceof ApiError)) return 'Đã có lỗi xảy ra.'
+  // 503 có mã nghiệp vụ (VD EMAIL_NOT_CONFIGURED / EMAIL_SEND_FAILED): câu server trả cho người dùng biết cần làm gì, không phải lỗi hệ thống chung.
+  if (error.status === 503 && error.detail && error.code !== 'INTERNAL_ERROR') return error.detail
   if (error.status >= 500) {
     return error.traceId
       ? `Đã có lỗi xảy ra. Mã tra cứu: ${error.traceId}`
@@ -96,7 +98,7 @@ export function getErrorMessage(error) {
   }
   if (error.status === 403 && error.code === 'FORBIDDEN') return 'Bạn không có quyền thực hiện thao tác này.'
   if (error.code === 'WRITE_OFF_NOT_ALLOWED') return 'Bạn chưa được cấp quyền bỏ nợ — cần chủ trọ cấp quyền.'
-  if (error.code === 'PROFILE_MANAGED_BY_OWNER') return 'Phó quản lý không tự sửa hồ sơ — liên hệ chủ trọ để đổi thông tin.'
+  if (error.code === 'PROFILE_MANAGED_BY_OWNER') return 'Quản lý khu không tự sửa hồ sơ — liên hệ chủ trọ để đổi thông tin.'
   if (error.code === 'SENSITIVE_DATA_FORBIDDEN') return 'Bạn chưa được cấp quyền xem số giấy tờ đầy đủ — cần chủ trọ cấp quyền.'
   if (error.status === 404 && !error.detail) return 'Không tìm thấy dữ liệu.'
   if (error.status === 413) return 'Dữ liệu quá lớn.'

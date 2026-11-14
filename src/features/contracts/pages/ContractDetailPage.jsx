@@ -197,7 +197,7 @@ export default function ContractDetailPage() {
           { id: 'rules', label: 'Nội quy' },
           { id: 'document', label: 'Văn bản' },
           { id: 'payments', label: 'Thu tiền' },
-          // Nhật ký thao tác: chỉ chủ trọ (phó quản lý → 403).
+          // Nhật ký thao tác: chỉ chủ trọ (quản lý khu → 403).
           { id: 'history', label: 'Lịch sử', hidden: !canViewAudit },
         ]
         const props = { contract: c, actions: a, refresh }

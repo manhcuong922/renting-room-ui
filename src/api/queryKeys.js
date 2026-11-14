@@ -49,6 +49,7 @@ export const queryKeys = {
   contracts: {
     ...resource('contracts'),
     billingPeriods: (id, until) => ['contracts', 'billing-periods', id, until ?? null],
+    billingGaps: (id) => ['contracts', 'billing-gaps', id],
     dataReview: (propertyId) => ['contracts', 'data-review', propertyId ?? null],
     liquidationPreview: (id, actualEndDate) => ['contracts', 'liquidation-preview', id, actualEndDate ?? null],
   },
