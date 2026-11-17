@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Ban, CheckCheck, HandCoins, Pencil, Plus, RefreshCw, RotateCcw, Send, Trash2, Undo2 } from 'lucide-react'
+import { cx } from '@/lib/cx'
 import { Fragment, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { invoicesApi, queryKeys } from '@/api'
@@ -108,14 +109,21 @@ function LineRow({ line, draft, onEdit, onReset, onDelete }) {
           {line.isManuallyEdited && <Badge tone="warning">Sửa tay</Badge>}
           {line.isSettled && <Badge tone="info">{line.type === 'Surcharge' ? 'Đã thu ngay' : 'Đã trả ngay'}</Badge>}
         </div>
+        {/* Điện thoại: ẩn 2 cột Số lượng / Đơn giá để thấy ngay cột Thành tiền; số lượng × đơn giá chuyển xuống dưới tên. */}
+        {!amountOnly && (
+          <div className={cx(styles.sub, styles.showSm)}>
+            {numberFormatter.format(line.quantity)}
+            {line.unit ? ` ${line.unit}` : ''} × {formatMoney(line.unitPrice)}
+          </div>
+        )}
         <SegmentRows segments={line.segments} unit={line.unit} />
         <PriceApplied price={line.price} unit={line.unit} />
         {line.prorationFactor !== null && line.prorationFactor !== undefined && line.prorationFactor !== 1 && <div className={styles.sub}>Hệ số kỳ lẻ: {numberFormatter.format(line.prorationFactor)}</div>}
         {line.isManuallyEdited && line.systemAmount !== null && <div className={styles.sub}>Hệ thống tính: {formatMoney(line.systemAmount)}</div>}
         {line.note && <div className={styles.sub}>{line.note}</div>}
       </td>
-      <td className={styles.num}>{amountOnly ? '—' : `${numberFormatter.format(line.quantity)}${line.unit ? ` ${line.unit}` : ''}`}</td>
-      <td className={styles.num}>{amountOnly ? '—' : formatMoney(line.unitPrice)}</td>
+      <td className={cx(styles.num, styles.hideSm)}>{amountOnly ? '—' : `${numberFormatter.format(line.quantity)}${line.unit ? ` ${line.unit}` : ''}`}</td>
+      <td className={cx(styles.num, styles.hideSm)}>{amountOnly ? '—' : formatMoney(line.unitPrice)}</td>
       <td className={styles.num}>
         <strong>{formatMoney(line.amount)}</strong>
         {line.isSettled && <div className={styles.sub}>không tính vào tổng</div>}
@@ -217,6 +225,17 @@ export default function InvoiceDetailPage() {
   // Phiếu nối tiếp một khoảng ngắt (BL-BR-45): xóa nháp / hủy phiếu ⇒ khoảng ngắt mất theo — chỉ cần biết khi còn xóa / hủy được.
   const summary = query.data?.summary
   const gaps = useBillingGaps(summary?.contractId, { enabled: Boolean(summary) && (isDraft(summary) || canVoid(summary)) })
+  // Chỉ hủy được phiếu MỚI NHẤT của hợp đồng (hóa đơn trả phòng chưa hủy luôn mới nhất). Biết trước thì khóa nút Hủy kèm lý do,
+  // thay vì để bấm rồi mới nhận lỗi từ server.
+  const siblings = useQuery({
+    queryKey: [...queryKeys.invoices.all, 'contract-siblings', summary?.contractId],
+    queryFn: ({ signal }) => invoicesApi.list({ contractId: summary.contractId, page: 1, pageSize: 100 }, { signal }),
+    enabled: Boolean(summary) && canVoid(summary),
+  })
+  const hasNewerInvoice =
+    Boolean(summary) &&
+    summary.type !== 'Final' &&
+    (siblings.data?.items ?? []).some((i) => i.id !== summary.id && i.status !== 'Void' && (i.type === 'Final' || i.periodStart > summary.periodStart))
   const resumedGap = gaps.data?.find((g) => g.resumedInvoiceId === summary.id)
   const gapText = resumedGap ? `khoảng thu ngoài hệ thống ${formatDate(resumedGap.fromDate)} – ${formatDate(resumedGap.toDate)} (${resumedGap.periodCount} kỳ)` : null
 
@@ -225,7 +244,8 @@ export default function InvoiceDetailPage() {
   // previousDebts / totalDue chỉ có ở GET chi tiết → giữ lại từ lần đọc trước nếu lệnh sửa không trả.
   const apply = (detail) => {
     queryClient.setQueryData(queryKeys.invoices.detail(id), (old) => ({ ...old, ...detail, previousDebts: detail.previousDebts ?? old?.previousDebts, previousContractDebts: detail.previousContractDebts ?? old?.previousContractDebts }))
-    for (const queryKey of [queryKeys.invoices.all, queryKeys.rooms.all, queryKeys.meters.all]) void queryClient.invalidateQueries({ queryKey, refetchType: 'active' })
+    // contracts.all: chốt / sửa phiếu đổi "việc còn phải làm" của màn thanh lý (hóa đơn trả phòng đã chốt chưa) — cache 30 giây sẽ còn hiện nháp.
+    for (const queryKey of [queryKeys.invoices.all, queryKeys.rooms.all, queryKeys.meters.all, queryKeys.contracts.all]) void queryClient.invalidateQueries({ queryKey, refetchType: 'active' })
   }
 
   /** Chạy một lệnh trên phiếu: báo kết quả bằng thông báo nổi; dữ liệu cũ (đã chốt / hủy ở nơi khác) thì tải lại. */
@@ -435,10 +455,10 @@ export default function InvoiceDetailPage() {
                   <thead>
                     <tr>
                       <th scope="col">Nội dung</th>
-                      <th scope="col" className={styles.num}>
+                      <th scope="col" className={cx(styles.num, styles.hideSm)}>
                         Số lượng
                       </th>
-                      <th scope="col" className={styles.num}>
+                      <th scope="col" className={cx(styles.num, styles.hideSm)}>
                         Đơn giá
                       </th>
                       <th scope="col" className={styles.num}>
@@ -643,7 +663,8 @@ export default function InvoiceDetailPage() {
                 await invoicesApi.remove(s.id)
                 queryClient.removeQueries({ queryKey: queryKeys.invoices.detail(id) })
                 await queryClient.invalidateQueries({ queryKey: queryKeys.invoices.all })
-                if (resumedGap) void queryClient.invalidateQueries({ queryKey: queryKeys.contracts.all })
+                // Luôn làm mới hợp đồng: xem trước thanh lý (liệt kê hóa đơn chặn) và nhãn hợp đồng phụ thuộc phiếu này, cache 30 giây sẽ còn hiện phiếu đã xóa.
+                void queryClient.invalidateQueries({ queryKey: queryKeys.contracts.all })
                 toast.success('Đã xóa phiếu nháp.')
                 navigate('/invoices', { replace: true })
               }}
@@ -657,8 +678,10 @@ export default function InvoiceDetailPage() {
               reasonMaxLength={300}
               confirmLabel="Hủy phiếu"
               tone="danger"
+              confirmDisabled={hasNewerInvoice}
+              blocker={hasNewerInvoice ? 'Hợp đồng còn phiếu kỳ sau hoặc hóa đơn trả phòng — hủy các phiếu đó trước, rồi mới hủy được phiếu này.' : undefined}
               onConfirm={(reason) =>
-                confirmAction(() => invoicesApi.void(s.id, reason), 'Đã hủy phiếu.', resumedGap ? () => void queryClient.invalidateQueries({ queryKey: queryKeys.contracts.all }) : undefined)
+                confirmAction(() => invoicesApi.void(s.id, reason), 'Đã hủy phiếu.', () => void queryClient.invalidateQueries({ queryKey: queryKeys.contracts.all }))
               }
             />
             <ConfirmDialog

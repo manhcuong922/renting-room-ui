@@ -25,7 +25,7 @@ export function ToastProvider({ children }) {
       idRef.current += 1
       const id = idRef.current
       lastRef.current = { key, at: now, id }
-      setToasts((list) => [...list.slice(-3), { id, tone, message, title }])
+      setToasts((list) => [...list.slice(-2), { id, tone, message, title }])
       setTimeout(() => dismiss(id), duration ?? DURATION[tone])
       return id
     },

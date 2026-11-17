@@ -117,7 +117,17 @@ export function ImportPanel({ property, kind, title, description, columns, unitK
       const byKey = Object.fromEntries(result.units.map((unit) => [normalizeKey(unit.key), unit]))
       // Đơn vị đã lưu: bỏ khỏi lưới (gửi lại sẽ bị bỏ qua, không nhân đôi). Đơn vị lỗi: giữ lại kèm lý do.
       setRows((current) => current.filter((item) => byKey[unitKeyOf(item.row)]?.outcome !== 'Saved').map((item) => ({ ...item, errors: [], warnings: [] })))
-      setUnitIssues(Object.fromEntries(result.units.filter((unit) => unit.outcome !== 'Saved').map((unit) => [normalizeKey(unit.key), { errors: unit.errors, warnings: [], outcome: unit.outcome }])))
+      // Ghép theo cả khóa phòng lẫn SỐ DÒNG: dòng thiếu mã phòng có khóa rỗng, không khớp khóa server trả ⇒ trước đây mất lý do và hiện nhãn "Hợp lệ".
+      setUnitIssues(
+        Object.fromEntries(
+          result.units
+            .filter((unit) => unit.outcome !== 'Saved')
+            .flatMap((unit) => {
+              const issue = { errors: unit.errors, warnings: [], outcome: unit.outcome }
+              return [[normalizeKey(unit.key), issue], ...(unit.rowNumbers ?? []).map((n) => [`#${n}`, issue])]
+            }),
+        ),
+      )
       setSavedCount((count) => count + result.saved)
       await invalidate(queryKeys.rooms.all, queryKeys.properties.all, queryKeys.renters.all, queryKeys.contracts.all, queryKeys.meters.all)
       if (result.saved > 0) toast.success(`Đã lưu ${result.saved} ${unitLabel}.`)
@@ -173,9 +183,15 @@ export function ImportPanel({ property, kind, title, description, columns, unitK
               </thead>
               <tbody>
                 {rows.map((item, index) => {
-                  const unit = unitIssues[unitKeyOf(item.row)]
+                  const unitKey = unitKeyOf(item.row)
+                  const unit = unitIssues[unitKey] ?? unitIssues[`#${item.row.rowNumber}`]
+                  // Lỗi / cảnh báo của cả phòng (đơn vị) chỉ in ở dòng đầu của phòng đó — các dòng sau (người ở cùng) lặp lại y nguyên làm bảng rất cao.
+                  const firstRowOfUnit = rows.find((r) => unitKeyOf(r.row) === unitKey)?.row.rowNumber
+                  const isFirstOfUnit = firstRowOfUnit === item.row.rowNumber
                   const errors = [...item.errors, ...(unit?.errors ?? [])]
                   const warnings = [...item.warnings, ...(unit?.warnings ?? [])]
+                  const shownErrors = isFirstOfUnit ? errors : item.errors
+                  const shownWarnings = isFirstOfUnit ? warnings : item.warnings
                   return (
                     <tr key={item.row.rowNumber} className={errors.length ? styles.rowError : warnings.length ? styles.rowWarning : undefined}>
                       <th scope="row" className={styles.rowHead}>
@@ -186,13 +202,14 @@ export function ImportPanel({ property, kind, title, description, columns, unitK
                           </div>
                         )}
                         {!unit?.outcome && errors.length === 0 && <Badge tone="success">Hợp lệ</Badge>}
-                        {errors.map((issue) => (
+                        {shownErrors.map((issue) => (
                           <div key={`${issue.code}-${issue.column ?? ''}-${issue.message}`} className={styles.error}>
                             {issue.column ? `${issue.column}: ` : ''}
                             {issue.message}
                           </div>
                         ))}
-                        {warnings.map((issue) => (
+                        {!isFirstOfUnit && (unit?.errors?.length > 0 || unit?.warnings?.length > 0) && <div className={styles.muted}>Ghi chú của phòng: xem dòng {firstRowOfUnit}.</div>}
+                        {shownWarnings.map((issue) => (
                           <div key={`${issue.code}-${issue.message}`} className={styles.warning}>
                             {issue.message}
                           </div>

@@ -64,7 +64,9 @@
 
 .statValue {
   min-height: 32px;
-  font-size: var(--text-2xl);
+  /* Điện thoại: số tiền dài (27.904.000 đ) không bị bẻ dòng ở ô 2 cột. */
+  font-size: clamp(1.05rem, 5vw, var(--text-2xl));
+  white-space: nowrap;
   font-weight: 700;
   line-height: 1.15;
   font-variant-numeric: tabular-nums;

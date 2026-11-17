@@ -70,6 +70,8 @@ svg {
 
 .visually-hidden {
   position: absolute !important;
+  /* Ghim sang trái: không có left thì phần tử lấy vị trí tĩnh — nằm trong bảng rộng (vd. chi tiết phiếu) sẽ đẩy cả trang tràn ngang trên điện thoại. */
+  left: 0;
   width: 1px;
   height: 1px;
   padding: 0;

@@ -214,6 +214,7 @@ export function toOptions(labels) {
 // Kết quả một lần đăng nhập (members.md#nhật-ký-đăng-nhập). Giá trị lạ → hiện nguyên mã.
 export const LOGIN_OUTCOME_LABELS = {
   Success: 'Đăng nhập thành công',
+  UnknownUser: 'Không có tài khoản này',
   WrongPassword: 'Sai mật khẩu',
   LockedOut: 'Tài khoản đang bị khóa / tạm khóa',
   TemporaryPasswordExpired: 'Mật khẩu tạm đã hết hạn',
@@ -305,6 +306,8 @@ export const DEPOSIT_STATUS = {
   Refunded: { label: 'Đã hoàn trả cọc', tone: 'success' },
   Forfeited: { label: 'Không trả cọc', tone: 'dark' },
   Transferred: { label: 'Đã chuyển sang HĐ ký lại', tone: 'info' },
+  // BL-BR-41: trừ vào hóa đơn trả phòng khi chốt — hủy hóa đơn đó thì về "Đang giữ cọc".
+  Deducted: { label: 'Đã trừ vào hóa đơn trả phòng', tone: 'info' },
 }
 export const OCCUPANT_ROLE_LABELS = { Resident: 'Người ở', CoTenant: 'Đồng thuê' }
 // Vai trò trong lịch sử thuê của phòng (rooms.md#lịch-sử-thuê-của-phòng)
@@ -334,6 +337,12 @@ export const AUDIT_ACTION_LABELS = {
   IdNumberLookup: 'Dò số giấy tờ',
   Anonymized: 'Ẩn danh',
   Import: 'Nhập Excel',
+  DownloadAttachment: 'Tải tài liệu nhạy cảm',
+  PropertiesAssigned: 'Đổi khu được giao',
+  NotificationResent: 'Gửi lại thông báo',
+  ZaloLinkCodeCreated: 'Tạo mã liên kết Zalo',
+  ZaloLinked: 'Liên kết Zalo',
+  ZaloUnlinked: 'Hủy liên kết Zalo',
 }
 // Tên đối tượng hay gặp; loại khác hiện nguyên tên server trả.
 export const AUDIT_ENTITY_LABELS = {
@@ -351,6 +360,22 @@ export const AUDIT_ENTITY_LABELS = {
   MeterReading: 'Chỉ số công tơ',
   RoomCharge: 'Khoản phát sinh',
   Organization: 'Tổ chức',
+  Attachment: 'Tài liệu đính kèm',
+  CollectionReduction: 'Giảm số thu',
+  ContractAsset: 'Tài sản hợp đồng',
+  ContractBillingGap: 'Khoảng thu ngoài hệ thống',
+  ContractFee: 'Dịch vụ hợp đồng',
+  ContractOccupant: 'Người ở',
+  ContractRentTerm: 'Giá thuê hợp đồng',
+  ContractRepresentative: 'Người đứng tên',
+  ContractRoomMove: 'Chuyển phòng',
+  ContractVehicle: 'Xe',
+  InvoiceAdjustment: 'Điều chỉnh phiếu',
+  InvoiceMeterSegment: 'Đoạn đo điện nước',
+  LoginEvent: 'Lần đăng nhập',
+  PaymentAllocation: 'Phân bổ phiếu thu',
+  RenterConsent: 'Đồng ý xử lý dữ liệu',
+  UserPropertyAccess: 'Khu được giao',
 }
 
 // Nhập Excel (imports.md)

@@ -7,7 +7,6 @@ import {
   PageHeader,
   Pagination,
   QueryView,
-  RadioGroup,
   SelectField,
   Tabs,
   TextField,
@@ -60,11 +59,12 @@ const COLUMNS = [
   {
     key: 'term',
     header: 'Thời hạn',
+    mobileFull: true,
     cell: formatContractTerm,
   },
   { key: 'rent', header: 'Giá hiện tại', align: 'right', cell: (c) => formatMoney(c.currentRent) },
   { key: 'people', header: 'Số người', cell: (c) => c.occupantCount },
-  { key: 'status', header: 'Trạng thái', cell: (c) => <ContractBadges contract={c} /> },
+  { key: 'status', header: 'Trạng thái', mobileHeader: true, cell: (c) => <ContractBadges contract={c} /> },
 ]
 
 // docs/api/contracts.md#danh-sách — sắp theo ngày bắt đầu mới nhất.
@@ -108,7 +108,7 @@ export default function ContractsPage() {
           value={params.propertyId}
           onChange={(e) => set({ propertyId: e.target.value })}
         />
-        <RadioGroup options={QUICK_FILTERS} value={params.quick} onChange={(quick) => set({ quick })} />
+        <SelectField aria-label="Bộ lọc nhanh" options={QUICK_FILTERS} value={params.quick} onChange={(e) => set({ quick: e.target.value })} />
       </Toolbar>
 
       <QueryView

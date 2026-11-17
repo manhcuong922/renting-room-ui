@@ -13,6 +13,7 @@ import { Modal } from './Modal'
  *   </FormDialog>
  *
  * onSubmit ném lỗi → hiện trong hộp thoại; thành công → onClose() (trừ khi onSubmit trả về false).
+ * submitDisabled: khóa nút xác nhận khi đã biết trước thao tác sẽ bị chặn (hộp thoại tự giải thích lý do).
  */
 export function FormDialog({
   title,
@@ -24,6 +25,7 @@ export function FormDialog({
   onSubmit,
   onClose,
   submitLabel = 'Lưu',
+  submitDisabled = false,
   tone = 'primary',
   size = 'sm',
   children,
@@ -49,7 +51,7 @@ export function FormDialog({
           <Button variant="secondary" onClick={onClose} disabled={form.submitting}>
             Hủy
           </Button>
-          <Button type="submit" form={formId} variant={tone === 'danger' ? 'danger' : 'primary'} loading={form.submitting}>
+          <Button type="submit" form={formId} variant={tone === 'danger' ? 'danger' : 'primary'} loading={form.submitting} disabled={submitDisabled}>
             {submitLabel}
           </Button>
         </>

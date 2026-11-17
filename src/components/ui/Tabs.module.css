@@ -16,6 +16,14 @@
   display: none;
 }
 
+/* Màn hình rộng: tab xuống dòng thay vì cuộn ngang ẩn thanh cuộn — tab cuối (vd. "Nhập Excel" ở khu trọ) không bị khuất. Điện thoại vẫn cuộn ngang. */
+@media (min-width: 768px) {
+  .list {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+}
+
 .tab {
   position: relative;
   display: inline-flex;

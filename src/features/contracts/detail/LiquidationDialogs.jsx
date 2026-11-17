@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { contractsApi, queryKeys, roomChargesApi } from '@/api'
 import {
@@ -149,10 +149,12 @@ function BillingWarnings({ preview: p, onTreatAsEndedAt, onGenerate }) {
 }
 
 /** Xem trước khi bắt đầu thanh lý theo ngày đang chọn: kỳ cuối + số tiền 3 cách, cảnh báo hóa đơn. */
-function StartPreview({ contract: c, form }) {
+function StartPreview({ contract: c, form, onBlocked }) {
   const date = form.values.actualEndDate
   const preview = useLiquidationPreview(c.id, { enabled: ISO_DATE.test(date ?? ''), actualEndDate: date })
   const p = preview.data
+  const mustCancel = Boolean(p?.invoicesFromEndDate?.some((i) => i.mustCancel))
+  useEffect(() => onBlocked?.(mustCancel), [mustCancel, onBlocked])
   if (preview.isPending) return <Spinner />
   if (preview.isError) return <Alert tone="warning">Không xem trước được số tiền kỳ cuối — vẫn bắt đầu thanh lý được.</Alert>
   return (
@@ -173,6 +175,17 @@ function StartPreview({ contract: c, form }) {
  */
 export function StartLiquidationDialog({ contract: c, onClose, onDone }) {
   const defaultEnd = c.plannedMoveOutDate ?? todayVN()
+  // CT-BR-11 (H-02): ngày trả phòng ≤ hôm nay ⇒ người thuê đã rời, server BẮT BUỘC chỉ số cuối mọi công tơ ngay lúc bắt đầu thanh lý
+  // (thiếu ⇒ 422 FINAL_READING_REQUIRED). Ngày tương lai không bắt — nhập sau ở hóa đơn trả phòng / lúc hoàn tất.
+  const meters = useRoomMeters(c.roomId)
+  const meterList = meters.data ?? []
+  const [readings, setReadings] = useState(null)
+  const [readingErrors, setReadingErrors] = useState({})
+  // Chỉ điền sẵn khi đã có chỉ số CHỐT ĐÚNG ngày trả phòng (docs: "điền sẵn bằng số chốt kỳ cùng ngày") — điền số cũ vài ngày trước sẽ lặng lẽ tính thiếu điện nước.
+  const readingsFor = (endDate) =>
+    readings ?? Object.fromEntries(meterList.map((m) => [m.id, { mode: 'custom', value: m.latestReading?.readingDate === endDate ? m.latestReading.value : null }]))
+  const [blocked, setBlocked] = useState(false) // có hóa đơn phải xóa / hủy trước ⇒ khóa nút (hộp thoại đã giải thích)
+  const needsReadings = (endDate) => ISO_DATE.test(endDate ?? '') && endDate <= todayVN()
   return (
     <FormDialog
       title="Thanh lý — trả phòng"
@@ -195,14 +208,27 @@ export function StartLiquidationDialog({ contract: c, onClose, onDone }) {
         END_DATE_BEFORE_ROOM_TRANSFER: 'actualEndDate',
       }}
       submitLabel="Bắt đầu thanh lý"
+      submitDisabled={blocked}
       onSubmit={async (v) => {
-        await contractsApi.startLiquidation(c.id, {
-          actualEndDate: v.actualEndDate,
-          reason: v.reason,
-          ground: v.reason === 'LessorUnilateral' ? v.ground || null : null,
-          note: v.note.trim() || null,
-          finalPeriodCharge: v.finalPeriodCharge,
-        })
+        const withReadings = needsReadings(v.actualEndDate) && meterList.length > 0
+        if (withReadings) {
+          const clientErrors = validateReadings(meterList, readingsFor(v.actualEndDate))
+          setReadingErrors(clientErrors)
+          if (Object.keys(clientErrors).length) throw new Error('Nhập đúng chỉ số cuối của từng công tơ.')
+        }
+        try {
+          await contractsApi.startLiquidation(c.id, {
+            actualEndDate: v.actualEndDate,
+            reason: v.reason,
+            ground: v.reason === 'LessorUnilateral' ? v.ground || null : null,
+            note: v.note.trim() || null,
+            finalPeriodCharge: v.finalPeriodCharge,
+            ...(withReadings && { finalReadings: toReadingInputs(meterList, readingsFor(v.actualEndDate)) }),
+          })
+        } catch (err) {
+          setReadingErrors(readingErrorsFromApi(err))
+          throw err
+        }
         await onDone('Đã chuyển sang thanh lý.')
       }}
       onClose={onClose}
@@ -232,8 +258,18 @@ export function StartLiquidationDialog({ contract: c, onClose, onDone }) {
               placeholder={abandoned ? 'Ngày phát hiện, đồ để lại, người chứng kiến…' : undefined}
               {...form.field('note')}
             />
+            {needsReadings(v.actualEndDate) && (
+              <div className="span-full">
+              <FormSection
+                title="Chỉ số cuối tại ngày trả phòng"
+                description="Người thuê đã rời nên cần chỉ số cuối của từng công tơ (điền sẵn bằng số mới nhất — sửa nếu khác). Hóa đơn trả phòng dùng sẵn các số này."
+              >
+                <MeterReadingsFields query={meters} kind="final" readings={readingsFor(v.actualEndDate)} onChange={setReadings} errors={readingErrors} />
+              </FormSection>
+              </div>
+            )}
             <div className="span-full" style={{ display: 'grid', gap: 'var(--space-3)' }}>
-              <StartPreview contract={c} form={form} />
+              <StartPreview contract={c} form={form} onBlocked={setBlocked} />
             </div>
           </FormGrid>
         )

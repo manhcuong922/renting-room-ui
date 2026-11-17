@@ -144,6 +144,7 @@ export default function InvoicesPage() {
     {
       key: 'period',
       header: 'Kỳ',
+      mobileFull: true,
       cell: (i) => (
         <span>
           {formatBillingMonth(i.billingMonth)}
@@ -161,7 +162,7 @@ export default function InvoicesPage() {
       cell: (i) => (i.status !== 'Finalized' ? '—' : i.refundDue > 0 ? `Phải hoàn ${formatMoney(i.refundDue)}` : formatMoney(i.outstanding)),
     },
     { key: 'due', header: 'Hạn', hideOnMobile: true, cell: (i) => (i.dueDate ? formatDate(i.dueDate) : '—') },
-    { key: 'status', header: 'Trạng thái', cell: (i) => <InvoiceBadges summary={i} /> },
+    { key: 'status', header: 'Trạng thái', mobileHeader: true, cell: (i) => <InvoiceBadges summary={i} /> },
   ]
 
   const propertyName = properties.data?.find((p) => p.id === params.propertyId)?.code

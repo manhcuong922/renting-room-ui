@@ -1,4 +1,5 @@
 import { useId, useRef } from 'react'
+import { useScrollActiveIntoView } from '@/hooks/useScrollActiveIntoView'
 import { cx } from '@/lib/cx'
 import styles from './Tabs.module.css'
 
@@ -11,6 +12,7 @@ export function Tabs({ tabs, value, onChange, label, idPrefix }) {
   const prefix = idPrefix ?? autoId
   const listRef = useRef(null)
   const visible = tabs.filter((t) => !t.hidden)
+  useScrollActiveIntoView(listRef, '[role="tab"][aria-selected="true"]', value)
 
   const onKeyDown = (event) => {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return

@@ -24,6 +24,8 @@ export function ConfirmDialog({
   reasonRequired = true,
   reasonMaxLength = 500,
   confirmText,
+  confirmDisabled = false,
+  blocker,
   children,
 }) {
   const formId = useId()
@@ -41,7 +43,7 @@ export function ConfirmDialog({
     onClose()
   }
 
-  const canConfirm = (!reasonLabel || !reasonRequired || reason.trim()) && (!confirmText || typed.trim() === confirmText)
+  const canConfirm = !confirmDisabled && (!reasonLabel || !reasonRequired || reason.trim()) && (!confirmText || typed.trim() === confirmText)
 
   const submit = async (event) => {
     event.preventDefault()
@@ -81,6 +83,7 @@ export function ConfirmDialog({
       }
     >
       <form id={formId} onSubmit={submit} style={{ display: 'grid', gap: 'var(--space-4)' }}>
+        {blocker && <Alert tone="warning">{blocker}</Alert>}
         {error && <Alert>{error}</Alert>}
         {message && <p style={{ color: 'var(--color-text-muted)' }}>{message}</p>}
         {children}

@@ -3,12 +3,14 @@ import { ScrollText } from 'lucide-react'
 import { useState } from 'react'
 import { auditApi, queryKeys } from '@/api'
 import { Badge, DataTable, EmptyState, Pagination, QueryView } from '@/components/ui'
+import { AUDIT_FIELD_LABELS } from '@/constants/auditFields'
 import { AUDIT_ACTION_LABELS, AUDIT_ENTITY_LABELS } from '@/constants/enums'
 import { formatDateTime } from '@/lib/format'
 import styles from './AuditLogList.module.css'
 
 const ACTION_TONE = { Created: 'success', Updated: 'info', Deleted: 'danger', Anonymized: 'danger', RevealIdNumber: 'warning', PrintWithIdNumbers: 'warning', ExportWithIdNumbers: 'warning', ExportRenters: 'warning', IdNumberLookup: 'warning' }
 const MAX_INLINE = 80
+const COLLAPSE_OVER = 6
 
 /** Giá trị trong `changes` → chuỗi đọc được. Server lưu một số trường (issues, bản chụp giá…) dưới dạng chuỗi JSON. */
 function toText(value) {
@@ -39,13 +41,15 @@ const isDiff = (value) => value !== null && typeof value === 'object' && !Array.
 function Changes({ changes }) {
   if (changes === null || changes === undefined) return '—'
   if (typeof changes !== 'object' || Array.isArray(changes)) return <Value value={changes} />
-  const entries = Object.entries(changes)
-  if (entries.length === 0) return '—'
-  return (
+  const all = Object.entries(changes)
+  if (all.length === 0) return '—'
+  // Bản ghi "Tạo" / "Xóa" liệt kê cả chục trường (nhiều trường rỗng) — bỏ trường rỗng, gập lại nếu còn dài; sửa (old → new) luôn hiện đủ.
+  const entries = all.filter(([, value]) => isDiff(value) || (value !== null && value !== undefined && value !== ''))
+  const list = (
     <ul className={styles.changes}>
       {entries.map(([field, value]) => (
         <li key={field}>
-          <span className={styles.field}>{field}:</span>{' '}
+          <span className={styles.field} title={field}>{AUDIT_FIELD_LABELS[field] ?? field}:</span>{' '}
           {isDiff(value) ? (
             <>
               <span className={styles.old}>
@@ -59,6 +63,13 @@ function Changes({ changes }) {
         </li>
       ))}
     </ul>
+  )
+  if (entries.length <= COLLAPSE_OVER) return entries.length === 0 ? '—' : list
+  return (
+    <details className={styles.long}>
+      <summary>Xem {entries.length} trường</summary>
+      {list}
+    </details>
   )
 }
 

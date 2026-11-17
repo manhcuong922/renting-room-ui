@@ -132,3 +132,27 @@
 .muted {
   color: var(--color-text-muted);
 }
+
+/* Điện thoại: bảng các khoản chỉ còn "Nội dung | Thành tiền" (số lượng × đơn giá nằm dưới tên) — trước đây cột Thành tiền bị đẩy ra ngoài màn hình, phải cuộn ngang mới thấy. */
+.showSm {
+  display: none;
+}
+
+@media (max-width: 639px) {
+  .hideSm {
+    display: none;
+  }
+
+  .showSm {
+    display: block;
+  }
+
+  .table {
+    min-width: 0;
+  }
+
+  .table th,
+  .table td {
+    padding: var(--space-3);
+  }
+}

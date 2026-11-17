@@ -35,17 +35,28 @@
 
 .dl {
   display: grid;
-  gap: var(--space-3) var(--space-6);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3) var(--space-4);
   margin: 0;
 }
 
+.dlSingle {
+  grid-template-columns: 1fr;
+}
+
+.dlFull,
+.dlLong {
+  grid-column: 1 / -1;
+}
+
+/* Điện thoại: 2 cột cho giá trị ngắn (trang dài giảm gần một nửa); chuỗi dài (> 28 ký tự) tự chiếm cả hàng. Từ 640px: giãn rộng như cũ. */
 @media (min-width: 640px) {
   .dl {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-3) var(--space-6);
   }
 
-  .dlSingle {
-    grid-template-columns: 1fr;
+  .dlLong {
+    grid-column: auto;
   }
 
   .dlFull {
@@ -73,12 +84,23 @@
   margin-bottom: var(--space-4);
 }
 
+/* 150px: hai ô lọc ngắn (chọn tầng, khoản thu…) nằm chung một hàng trên điện thoại. */
 .toolbar > * {
-  flex: 1 1 180px;
+  flex: 1 1 150px;
 }
 
 .toolbar > :first-child {
   flex: 2 1 240px;
+}
+
+/* Ô tích lọc (Còn nợ, Cần tính lại…) chỉ rộng bằng nội dung để xếp cạnh nhau, không mỗi ô một hàng trên điện thoại. */
+.toolbar > :has(input[type='checkbox']) {
+  flex: 0 0 auto;
+}
+
+/* Nhóm nút phân đoạn (RadioGroup) giữ đúng bề rộng nội dung, không bị ép 200px rồi bẻ dòng chồng chéo. */
+.toolbar > :has([role='radiogroup']) {
+  flex: 0 0 auto;
 }
 
 @media (min-width: 1024px) {
@@ -88,6 +110,10 @@
 
   .toolbar > :first-child {
     flex: 0 1 320px;
+  }
+
+  .toolbar > :has([role='radiogroup']) {
+    flex: 0 0 auto;
   }
 }
 

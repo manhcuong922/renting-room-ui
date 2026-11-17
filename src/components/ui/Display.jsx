@@ -36,7 +36,7 @@ export function DescriptionList({ items, columns = 2 }) {
       {items
         .filter((i) => !i.hidden)
         .map((item) => (
-          <div key={item.label} className={cx(styles.dlItem, item.full && styles.dlFull)}>
+          <div key={item.label} className={cx(styles.dlItem, item.full && styles.dlFull, typeof item.value === 'string' && item.value.length > 28 && styles.dlLong)}>
             <dt>{item.label}</dt>
             <dd>{item.value === null || item.value === undefined || item.value === '' ? '—' : item.value}</dd>
           </div>

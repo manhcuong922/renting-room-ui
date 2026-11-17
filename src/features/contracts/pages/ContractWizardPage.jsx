@@ -8,6 +8,7 @@ import { CONTRACT_WARNING_LABELS } from '@/constants/enums'
 import { useInvalidate } from '@/hooks/useAction'
 import { useForm } from '@/hooks/useForm'
 import { useIdempotencyKey } from '@/hooks/useIdempotencyKey'
+import { useScrollActiveIntoView } from '@/hooks/useScrollActiveIntoView'
 import { cx } from '@/lib/cx'
 import { WIZARD_STEPS, buildContractInput, draftToForm, emptyContractForm, remapServerErrors, stepOfField, validateStep } from '../contractForm'
 import { FeesStep } from '../wizard/FeesStep'
@@ -186,6 +187,10 @@ function Wizard({ initial, contract, presetRoomId }) {
     }
   })
 
+  // Điện thoại: thanh bước cuộn ngang — luôn đưa bước hiện tại vào giữa khung nhìn.
+  const stepperRef = useRef(null)
+  useScrollActiveIntoView(stepperRef, '[aria-current="step"]', `${stepIndex}-${presetLoading}`)
+
   if (presetLoading) return <PageLoader />
 
   const isLast = stepIndex === WIZARD_STEPS.length - 1
@@ -199,7 +204,7 @@ function Wizard({ initial, contract, presetRoomId }) {
         description={room ? `${room.propertyCode} · Phòng ${room.code}` : 'Lưu nháp trước, kích hoạt khi bàn giao phòng.'}
       />
 
-      <ol className={styles.stepper} aria-label="Các bước">
+      <ol ref={stepperRef} className={styles.stepper} aria-label="Các bước">
         {WIZARD_STEPS.map((s, i) => (
           <li key={s.id}>
             <button

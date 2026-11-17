@@ -113,6 +113,14 @@ export function ReadingSheet({ propertyId, billingMonth, rows: allRows, view }) 
     {
       key: 'meter',
       header: 'Công tơ',
+      // Thẻ điện thoại: chỉ "Điện · E-101" cạnh số phòng (kỳ giống nhau cho cả lưới nên không lặp lại ở từng thẻ).
+      mobileHeader: true,
+      mobileCell: (r) => (
+        <strong>
+          {r.feeTypeName}
+          {r.serialNo ? ` · ${r.serialNo}` : ''}
+        </strong>
+      ),
       cell: (r) => (
         <div>
           {r.feeTypeName}
