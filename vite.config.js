@@ -10,7 +10,8 @@ function cspPlugin(apiBaseUrl) {
     "default-src 'self'",
     "script-src 'self'",
     "style-src 'self'",
-    "img-src 'self' data:",
+    "img-src 'self' data: blob:", // blob: — ảnh đính kèm tải bằng token rồi hiện qua URL tạm (M09)
+    "frame-src blob:", // xem PDF đính kèm trong hộp thoại
     "font-src 'self'",
     ['connect-src', "'self'", apiOrigin].filter(Boolean).join(' '),
     "object-src 'none'",

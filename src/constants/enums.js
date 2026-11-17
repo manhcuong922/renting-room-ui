@@ -226,6 +226,17 @@ export const INVOICE_STATUS = {
   Finalized: { label: 'Đã chốt', tone: 'success' },
   Void: { label: 'Đã hủy', tone: 'dark' },
 }
+// M11 — docs/api/notifications.md
+export const NOTIFICATION_CHANNEL_LABELS = { Zalo: 'Zalo', Email: 'Email' }
+export const NOTIFICATION_KIND_LABELS = { InvoiceIssued: 'Phiếu mới chốt', OverdueReminder: 'Nhắc nợ', ManualResend: 'Gửi lại' }
+export const NOTIFICATION_STATUS = {
+  Pending: { label: 'Chờ gửi', tone: 'warning' },
+  Sending: { label: 'Đang gửi', tone: 'info' },
+  Sent: { label: 'Đã gửi', tone: 'success' },
+  Failed: { label: 'Gửi lỗi', tone: 'danger' },
+  Skipped: { label: 'Bỏ qua', tone: 'neutral' },
+  Cancelled: { label: 'Đã hủy', tone: 'dark' },
+}
 export const INVOICE_TYPE_LABELS = { Regular: 'Phiếu tháng', Final: 'Hóa đơn trả phòng' }
 export const INVOICE_PAYMENT_STATUS = {
   Unpaid: { label: 'Chưa thu', tone: 'warning' },
@@ -349,3 +360,32 @@ export const IMPORT_OUTCOME = {
   Invalid: { label: 'Không hợp lệ — chưa lưu', tone: 'danger' },
   Failed: { label: 'Lỗi lúc lưu — chưa lưu', tone: 'warning' },
 }
+
+// docs/api/attachments.md — loại tài liệu đính kèm (M09). Nhạy cảm (ảnh giấy tờ) chỉ tải qua API và được ghi nhật ký.
+export const ATTACHMENT_CATEGORY_LABELS = {
+  IdCardFront: 'CCCD mặt trước',
+  IdCardBack: 'CCCD mặt sau',
+  Portrait: 'Ảnh chân dung',
+  RoomPhoto: 'Ảnh phòng',
+  MeterPhoto: 'Ảnh công tơ',
+  PaymentProof: 'Chứng từ chuyển khoản',
+  AuthorizationDoc: 'Giấy ủy quyền cho thuê',
+  LessorIdCard: 'Giấy tờ bên cho thuê',
+  ComplianceDoc: 'Giấy tờ PCCC / pháp lý',
+  Other: 'Khác',
+}
+
+// Loại cho phép theo đối tượng (khớp AttachmentRules ở BE). Chỉ giữ 1 tệp: tải lại sẽ thay tệp cũ.
+export const ATTACHMENT_CATEGORIES_BY_OWNER = {
+  Renter: ['IdCardFront', 'IdCardBack', 'Portrait', 'Other'],
+  Room: ['RoomPhoto', 'Other'],
+  Property: ['AuthorizationDoc', 'LessorIdCard', 'ComplianceDoc', 'Other'],
+  MeterReading: ['MeterPhoto', 'Other'],
+  Payment: ['PaymentProof', 'Other'],
+}
+export const ATTACHMENT_SINGLE_CATEGORIES = new Set(['IdCardFront', 'IdCardBack', 'Portrait', 'LessorIdCard'])
+// Chứng từ tài chính: BE không cho xóa (ATTACHMENT_LOCKED) ⇒ ẩn nút xóa.
+export const ATTACHMENT_LOCKED_CATEGORIES = new Set(['PaymentProof', 'MeterPhoto'])
+export const ATTACHMENT_MAX_FILE_BYTES = 10 * 1024 * 1024
+export const ATTACHMENT_MAX_FILES = 20
+export const ATTACHMENT_ACCEPT = 'image/jpeg,image/png,image/webp,image/heic,application/pdf'

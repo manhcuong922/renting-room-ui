@@ -6,11 +6,13 @@ import { Alert, Badge, Button, Card, ConfirmDialog, PageHeader, QueryView, TabPa
 import { ExportRentersDialog } from '@/features/exports/ExportRentersDialog'
 import { usePermission } from '@/features/auth/AuthContext'
 import { Permission } from '@/features/auth/permissions'
+import { AttachmentsSection } from '@/features/attachments/components/AttachmentsSection'
 import { FeesTab } from '@/features/fees/components/FeesTab'
 import { ImportTab } from '@/features/imports/components/ImportTab'
 import { PropertyMetersTab } from '@/features/meters/components/PropertyMetersTab'
 import { useAction } from '@/hooks/useAction'
 import { useTabParam } from '@/hooks/useTabParam'
+import { NotificationSettingsTab } from '@/features/notifications/components/NotificationSettingsTab'
 import { BillingTab } from '../components/BillingTab'
 import { PropertyLessorTab } from '../components/PropertyLessorTab'
 import { PropertyRoomsTab } from '../components/PropertyRoomsTab'
@@ -27,6 +29,7 @@ export default function PropertyDetailPage() {
   const [tab, setTab] = useTabParam('rooms')
   const [dialog, setDialog] = useState(null) // 'archive' | 'restore' | 'export'
   const canImport = usePermission(Permission.ImportsManage)
+  const canManage = usePermission(Permission.PropertiesManage)
   const canAdminister = usePermission(Permission.PropertiesAdminister) // ngừng / khôi phục khu — chỉ chủ trọ
 
   const invalidate = [queryKeys.properties.all, queryKeys.rooms.all]
@@ -43,7 +46,9 @@ export default function PropertyDetailPage() {
           { id: 'info', label: 'Thông tin chung' },
           { id: 'billing', label: 'Kỳ thu' },
           { id: 'lessor', label: 'Bên cho thuê', badge: property.lessor?.isComplete ? '✓' : '!' },
+          { id: 'notifications', label: 'Thông báo' },
           { id: 'bank', label: 'Ngân hàng' },
+          { id: 'documents', label: 'Tài liệu' },
           { id: 'rules', label: 'Nội quy' },
           { id: 'groups', label: 'Nhóm phòng' },
           // Nhập Excel: chỉ chủ trọ.
@@ -98,11 +103,15 @@ export default function PropertyDetailPage() {
               {tab === 'fees' && <FeesTab property={property} />}
               {tab === 'meters' && <PropertyMetersTab property={property} />}
               {tab === 'import' && canImport && <ImportTab property={property} />}
+              {tab === 'documents' && (
+                <AttachmentsSection ownerType="Property" ownerId={property.id} title="Tài liệu của khu" canManage={canManage} />
+              )}
               {tab === 'billing' && <BillingTab key={property.version} property={property} />}
-              {!['rooms', 'groups', 'billing', 'fees', 'meters', 'import'].includes(tab) && (
+              {!['rooms', 'groups', 'billing', 'fees', 'meters', 'import', 'documents'].includes(tab) && (
                 <Card>
                   {tab === 'info' && <PropertyInfoTab key={property.version} property={property} />}
                   {tab === 'lessor' && <PropertyLessorTab key={property.version} property={property} />}
+                  {tab === 'notifications' && <NotificationSettingsTab key={property.version} property={property} />}
                   {tab === 'bank' && <BankTab key={property.version} property={property} />}
                   {tab === 'rules' && <HouseRulesTab key={property.version} property={property} />}
                 </Card>

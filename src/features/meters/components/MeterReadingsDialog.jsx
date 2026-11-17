@@ -1,9 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
-import { Pencil, Trash2 } from 'lucide-react'
+import { Camera, Pencil, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { metersApi, queryKeys } from '@/api'
 import { Badge, Button, ConfirmDialog, DataTable, EmptyState, Modal, QueryView } from '@/components/ui'
 import { READING_KIND_LABELS } from '@/constants/enums'
+import { AttachmentsDialog } from '@/features/attachments/components/AttachmentsDialog'
+import { usePermission } from '@/features/auth/AuthContext'
+import { Permission } from '@/features/auth/permissions'
 import { useAction } from '@/hooks/useAction'
 import { formatDate } from '@/lib/format'
 import { VOIDABLE_KINDS, formatReading } from '../meterRules'
@@ -16,6 +19,8 @@ import { AdjustReadingDialog, CorrectReadingDialog } from './MeterDialogs'
 export function MeterReadingsDialog({ meter, onClose }) {
   const [editing, setEditing] = useState(null)
   const [voiding, setVoiding] = useState(null)
+  const [photosOf, setPhotosOf] = useState(null) // chỉ số đang xem ảnh công tơ
+  const canAttach = usePermission(Permission.RoomsManage)
   const [adjusting, setAdjusting] = useState(null) // { reading, value } — chỉ số đã khóa bởi hóa đơn đã chốt
   const query = useQuery({
     queryKey: queryKeys.meters.readings(meter.id),
@@ -39,6 +44,9 @@ export function MeterReadingsDialog({ meter, onClose }) {
       align: 'right',
       cell: (r) => (
         <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 6, justifyContent: 'flex-end' }}>
+          <Button size="sm" variant="ghost" icon={Camera} onClick={() => setPhotosOf(r)}>
+            Ảnh
+          </Button>
           <Button size="sm" variant="secondary" icon={Pencil} onClick={() => setEditing(r)}>
             Sửa
           </Button>
@@ -77,6 +85,16 @@ export function MeterReadingsDialog({ meter, onClose }) {
             setAdjusting({ reading: editing, value })
             setEditing(null)
           }}
+        />
+      )}
+      {photosOf && (
+        <AttachmentsDialog
+          ownerType="MeterReading"
+          ownerId={photosOf.id}
+          title={`Ảnh công tơ — ${formatDate(photosOf.readingDate)} (${formatReading(photosOf.value)} ${meter.unit})`}
+          description="Ảnh chụp mặt công tơ làm bằng chứng (tối đa 3 ảnh). Ảnh đã tải lên không xóa được."
+          canManage={canAttach}
+          onClose={() => setPhotosOf(null)}
         />
       )}
       {adjusting && <AdjustReadingDialog meter={meter} reading={adjusting.reading} initialValue={adjusting.value} onClose={() => setAdjusting(null)} />}

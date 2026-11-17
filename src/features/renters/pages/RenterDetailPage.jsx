@@ -20,11 +20,13 @@ import {
 import { CONTRACT_STATUS, GENDER_LABELS, ID_DOCUMENT_TYPE_LABELS } from '@/constants/enums'
 import { AuditLogList } from '@/features/audit/components/AuditLogList'
 import { Can } from '@/features/auth/access'
-import { useCanViewSensitiveData } from '@/features/auth/AuthContext'
+import { useCanViewSensitiveData, usePermission } from '@/features/auth/AuthContext'
 import { Permission } from '@/features/auth/permissions'
 import { formatContractTerm } from '@/features/contracts/contractRules'
 import { useAction } from '@/hooks/useAction'
 import { formatDate, formatDateTime, formatMoney } from '@/lib/format'
+import { AttachmentsSection } from '@/features/attachments/components/AttachmentsSection'
+import { ZaloLinkSection } from '@/features/notifications/components/ZaloLinkSection'
 import { ConsentsSection } from '../components/ConsentsSection'
 import { RenterFormDialog } from '../components/RenterFormDialog'
 import { useRenter } from '../hooks'
@@ -90,6 +92,7 @@ export default function RenterDetailPage() {
   const { id } = useParams()
   const query = useRenter(id)
   const canViewSensitive = useCanViewSensitiveData()
+  const canManage = usePermission(Permission.RentersManage)
   const [editing, setEditing] = useState(false)
   const [anonymizeStep, setAnonymizeStep] = useState(0) // 0 đóng · 1 cảnh báo · 2 xác nhận
   const [archiving, setArchiving] = useState(false)
@@ -170,6 +173,8 @@ export default function RenterDetailPage() {
               </Section>
             )}
 
+            {!anonymized && <AttachmentsSection ownerType="Renter" ownerId={r.id} title="Giấy tờ và ảnh" canManage={canManage} />}
+
             <Section title="Lịch sử thuê" description="Hợp đồng người này đứng tên hoặc ở cùng." padded={false}>
               <div style={{ padding: '0 var(--space-4) var(--space-4)' }}>
                 <QueryView query={contracts} isEmpty={(d) => d.items.length === 0} empty={<EmptyState title="Chưa có hợp đồng" />}>
@@ -177,6 +182,8 @@ export default function RenterDetailPage() {
                 </QueryView>
               </div>
             </Section>
+
+            <ZaloLinkSection renter={r} canManage={canManage} />
 
             <ConsentsSection renter={r} />
 

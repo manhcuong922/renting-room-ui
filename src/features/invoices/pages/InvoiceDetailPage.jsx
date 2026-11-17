@@ -18,6 +18,7 @@ import { EditCollectedDialog, PayAndWriteOffDialog, RecordPaymentDialog, WriteOf
 import { PaymentHistory } from '@/features/payments/components/PaymentHistory'
 import { InvoiceBadges } from '../components/InvoiceBadges'
 import { AddLineDialog, ConfirmRefundDialog, EditLineDialog } from '../components/LineDialogs'
+import { InvoiceNotificationsSection } from '@/features/notifications/components/InvoiceNotificationsSection'
 import { canFinalize, canVoid, groupLines, hasSettlement, invoiceAmount, invoiceTitle, isCarried, isDraft, isFinalized, settlementLines } from '../invoiceRules'
 import styles from './InvoiceDetailPage.module.css'
 
@@ -550,6 +551,8 @@ export default function InvoiceDetailPage() {
                 <PaymentHistory filter={{ invoiceId: s.id }} emptyTitle="Phiếu chưa có lần thu nào" />
               </Section>
             )}
+
+            <InvoiceNotificationsSection invoice={invoice} canResend />
 
             <Section
               title="Ghi chú in trên phiếu"

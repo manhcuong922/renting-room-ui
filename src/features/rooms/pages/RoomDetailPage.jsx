@@ -19,6 +19,9 @@ import {
 } from '@/components/ui'
 import { AMENITY_LABELS, CONTRACT_STATUS, ROOM_STATUS } from '@/constants/enums'
 import { useAction } from '@/hooks/useAction'
+import { AttachmentsSection } from '@/features/attachments/components/AttachmentsSection'
+import { usePermission } from '@/features/auth/AuthContext'
+import { Permission } from '@/features/auth/permissions'
 import { ContractFlagBadges } from '@/features/contracts/components/ContractBadges'
 import { formatContractTerm } from '@/features/contracts/contractRules'
 import { RoomInvoicesSection } from '@/features/invoices/components/RoomInvoicesSection'
@@ -46,6 +49,7 @@ export default function RoomDetailPage() {
   const { id } = useParams()
   const query = useRoom(id)
   const [dialog, setDialog] = useState(null) // 'edit' | 'maintenance' | 'endMaintenance' | 'archive' | 'restore'
+  const canManage = usePermission(Permission.RoomsManage)
   const contracts = useQuery({
     queryKey: queryKeys.contracts.list({ roomId: id, pageSize: 50 }),
     queryFn: ({ signal }) => contractsApi.list({ roomId: id, page: 1, pageSize: 50 }, { signal }),
@@ -171,6 +175,8 @@ export default function RoomDetailPage() {
                 ]}
               />
             </Section>
+
+            <AttachmentsSection ownerType="Room" ownerId={room.id} title="Ảnh phòng" canManage={canManage} />
 
             <RoomMetersSection room={room} />
 

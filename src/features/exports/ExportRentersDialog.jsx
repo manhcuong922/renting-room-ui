@@ -10,6 +10,7 @@ import {
   Modal,
   RadioGroup,
   Spinner,
+  TextField,
   useToast,
 } from '@/components/ui'
 import { EXPORT_LAYOUT_LABELS, toOptions } from '@/constants/enums'
@@ -30,6 +31,7 @@ function validate(v) {
   return {
     fromDate: v.time === 'range' && !v.fromDate ? 'Chọn ngày bắt đầu.' : null,
     toDate: v.time === 'range' && v.toDate && v.fromDate && v.toDate < v.fromDate ? 'Ngày kết thúc phải sau ngày bắt đầu.' : null,
+    currentPassword: v.includeSensitive && !v.currentPassword ? 'Nhập mật khẩu đăng nhập để xuất số giấy tờ đầy đủ.' : null,
   }
 }
 
@@ -53,8 +55,9 @@ export function ExportRentersDialog({ open, onClose, presetPropertyIds = [] }) {
       toDate: '',
       layout: 'SheetPerProperty',
       includeSensitive: false,
+      currentPassword: '',
     },
-    { validate, codeFields: { INVALID_DATE_RANGE: 'toDate' } },
+    { validate, codeFields: { INVALID_DATE_RANGE: 'toDate', CURRENT_PASSWORD_REQUIRED: 'currentPassword', INVALID_CURRENT_PASSWORD: 'currentPassword' } },
   )
   const singleProperty = form.values.propertyIds.length === 1 ? form.values.propertyIds[0] : null
   const rooms = usePropertyRooms(singleProperty)
@@ -70,6 +73,8 @@ export function ExportRentersDialog({ open, onClose, presetPropertyIds = [] }) {
       toDate: v.time === 'range' ? v.toDate || v.fromDate : null,
       layout: v.layout,
       includeSensitive: canViewSensitive && v.includeSensitive,
+      // M-30: xuất số giấy tờ đầy đủ phải nhập lại mật khẩu đăng nhập.
+      currentPassword: canViewSensitive && v.includeSensitive ? v.currentPassword : undefined,
     }
     const { blob, filename } = await exportsApi.renters(body)
     saveBlob(blob, filename ?? defaultFileName())
@@ -179,6 +184,16 @@ export function ExportRentersDialog({ open, onClose, presetPropertyIds = [] }) {
             )}
             {canViewSensitive && form.values.includeSensitive && (
               <Alert tone="warning">File chứa số giấy tờ đầy đủ. Chỉ gửi cho cơ quan có thẩm quyền, không chia sẻ công khai.</Alert>
+            )}
+            {canViewSensitive && form.values.includeSensitive && (
+              <TextField
+                label="Mật khẩu đăng nhập"
+                type="password"
+                required
+                autoComplete="current-password"
+                hint="Xác nhận chính bạn xuất số giấy tờ đầy đủ. Nhập sai nhiều lần tài khoản sẽ bị khóa tạm."
+                {...form.field('currentPassword')}
+              />
             )}
             <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>Giới hạn 5 lần xuất / phút mỗi tài khoản.</p>
           </div>

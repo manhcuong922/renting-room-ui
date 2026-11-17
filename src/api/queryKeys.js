@@ -44,6 +44,8 @@ export const queryKeys = {
   roomCharges: { all: ['room-charges'], list: (params) => ['room-charges', 'list', params], byRoom: (roomId, params) => ['room-charges', 'by-room', roomId, params ?? null] },
   payments: { all: ['payments'], list: (params) => ['payments', 'list', params], balance: (contractId) => ['payments', 'balance', contractId] },
   renters: { ...resource('renters'), consents: (id) => ['renters', 'consents', id] },
+  attachments: { all: ['attachments'], byOwner: (ownerType, ownerId) => ['attachments', 'owner', ownerType, ownerId] },
+  notifications: { all: ['notifications'], channels: ['notifications', 'channels'], byInvoice: (invoiceId) => ['notifications', 'invoice', invoiceId] },
   audit: { all: ['audit'], list: (params) => ['audit', 'list', params] },
   contractTemplates: { ...resource('contract-templates'), presets: ['contract-templates', 'presets'] },
   contracts: {
