@@ -26,6 +26,7 @@
   --color-warning: #a16207;
   --color-warning-soft: #fdf5dc;
   --color-danger: #b91c1c;
+  --color-danger-contrast: #ffffff;
   --color-danger-soft: #fdeaea;
   --color-info: #1d4ed8;
   --color-info-soft: #e7eefd;
@@ -76,8 +77,52 @@
   --z-popover: 60;
 }
 
+/*
+ * Chế độ tối: bật tay bằng [data-theme='dark'] (nút chuyển ở menu tài khoản / màn đăng nhập),
+ * hoặc theo hệ điều hành khi KHÔNG ép [data-theme='light'] (chế độ "Theo hệ thống" = không đặt data-theme).
+ * Hai khối dưới có cùng nội dung — sửa màu tối thì sửa cả hai.
+ */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --color-bg: #0e1319;
+  --color-surface: #151c24;
+  --color-surface-muted: #1b232d;
+  --color-surface-hover: #212b37;
+  --color-border: #263140;
+  --color-border-strong: #364456;
+  --color-text: #e6ebf1;
+  --color-text-muted: #a2aebd;
+  --color-text-subtle: #75839a;
+
+  --color-primary: #2dd4bf;
+  --color-primary-hover: #5eead4;
+  --color-primary-soft: rgb(45 212 191 / 0.14);
+  --color-primary-contrast: #062925;
+  --color-focus: #5eead4;
+
+  --color-success: #4ade80;
+  --color-success-soft: rgb(74 222 128 / 0.14);
+  --color-warning: #facc15;
+  --color-warning-soft: rgb(250 204 21 / 0.14);
+  --color-danger: #f87171;
+  --color-danger-contrast: #2a0a0a;
+  --color-danger-soft: rgb(248 113 113 / 0.14);
+  --color-info: #60a5fa;
+  --color-info-soft: rgb(96 165 250 / 0.14);
+  --color-orange: #fb923c;
+  --color-orange-soft: rgb(251 146 60 / 0.14);
+  --color-neutral: #a2aebd;
+  --color-neutral-soft: rgb(162 174 189 / 0.14);
+
+  --sidebar-bg: #121920;
+  --overlay-bg: rgb(0 0 0 / 0.6);
+  --shadow-md: 0 4px 12px rgb(0 0 0 / 0.4);
+  --shadow-lg: 0 16px 40px rgb(0 0 0 / 0.55);
+}
+
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     color-scheme: dark;
 
     --color-bg: #0e1319;
@@ -101,6 +146,7 @@
     --color-warning: #facc15;
     --color-warning-soft: rgb(250 204 21 / 0.14);
     --color-danger: #f87171;
+    --color-danger-contrast: #2a0a0a;
     --color-danger-soft: rgb(248 113 113 / 0.14);
     --color-info: #60a5fa;
     --color-info-soft: rgb(96 165 250 / 0.14);

@@ -1,10 +1,12 @@
-import { ChevronDown, LogOut, MonitorSmartphone, User } from 'lucide-react'
+import { Check, ChevronDown, LogOut, MonitorSmartphone, User } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { Badge } from '@/components/ui'
+import { THEME_OPTIONS } from '@/components/ui/themeOptions'
 import { ROLE_LABELS } from '@/constants/enums'
 import { useAuth } from '@/features/auth/AuthContext'
 import { initials } from '@/lib/format'
+import { useTheme } from '@/lib/theme'
 import styles from './UserMenu.module.css'
 
 // Menu tài khoản: hồ sơ, đăng xuất, đăng xuất mọi thiết bị (docs/api/auth.md#đăng-xuất).
@@ -17,6 +19,7 @@ export function UserMenu() {
   const triggerRef = useRef(null)
   const menuRef = useRef(null)
   const menuId = useId()
+  const { theme, setTheme } = useTheme()
 
   useEffect(() => {
     if (!open) return undefined
@@ -43,7 +46,7 @@ export function UserMenu() {
   const onMenuKeyDown = (event) => {
     if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return
     event.preventDefault()
-    const items = [...menuRef.current.querySelectorAll('[role="menuitem"]:not(:disabled)')]
+    const items = [...menuRef.current.querySelectorAll('[role="menuitem"]:not(:disabled), [role="menuitemradio"]')]
     const index = items.indexOf(document.activeElement)
     const next =
       event.key === 'Home' ? 0
@@ -108,6 +111,22 @@ export function UserMenu() {
             >
               <User size={16} aria-hidden /> Hồ sơ của tôi
             </button>
+          </div>
+          <div className={styles.menuGroup} role="group" aria-label="Giao diện">
+            <p className={styles.groupLabel}>Giao diện</p>
+            {THEME_OPTIONS.map(({ value, label, icon: Icon }) => (
+              <button
+                key={value}
+                type="button"
+                role="menuitemradio"
+                aria-checked={theme === value}
+                className={`${styles.item} ${theme === value ? styles.itemChecked : ''}`}
+                onClick={() => setTheme(value)}
+              >
+                <Icon size={16} aria-hidden /> {label}
+                {theme === value && <Check size={16} className={styles.check} aria-hidden />}
+              </button>
+            ))}
           </div>
           <div className={styles.menuGroup}>
             <button type="button" role="menuitem" className={styles.item} disabled={busy} onClick={run(logout)}>

@@ -1,7 +1,7 @@
 import { House } from 'lucide-react'
 import { Suspense } from 'react'
 import { Outlet, useMatches } from 'react-router'
-import { PageLoader } from '@/components/ui'
+import { PageLoader, ThemeToggle } from '@/components/ui'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import styles from './AuthLayout.module.css'
 
@@ -12,6 +12,7 @@ export function AuthLayout() {
 
   return (
     <div className={styles.page}>
+      <ThemeToggle className={styles.theme} />
       <div className={styles.panel}>
         <div className={styles.brand}>
           <span className={styles.logo}>

@@ -81,7 +81,7 @@ a.secondary:hover {
 
 .danger {
   background: var(--color-danger);
-  color: #fff;
+  color: var(--color-danger-contrast);
 }
 
 .danger:not(:disabled):hover {
