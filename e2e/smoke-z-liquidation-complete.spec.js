@@ -110,12 +110,16 @@ test('hoàn tất thanh lý: hóa đơn trả phòng → chốt → thu → cọ
   })
 
   await run('Xử lý cọc rồi hoàn tất thanh lý', async () => {
+    // Điều hướng trong cùng phiên: trang thoáng hiện dữ liệu cũ (cọc chưa trừ) tới khi lần tải lại xong — chậm hơn ở Firefox. Chờ đúng phản hồi đó.
+    const refreshed = page.waitForResponse((r) => r.request().method() === 'GET' && /\/contracts\/[0-9a-f-]{36}$/.test(r.url().split('?')[0]), { timeout: 20_000 }).catch(() => {})
     await openContract()
+    await refreshed
+    await page.waitForTimeout(500)
     const refund = page.getByRole('button', { name: 'Đã hoàn trả cọc' }).first()
     if (await refund.count()) {
       await refund.click()
       await shot('3-deposit-dialog')
-      await dialog().getByRole('button', { name: /Ghi|Xác nhận|Lưu|Hoàn/ }).last().click()
+      await dialog().getByRole('button', { name: /ghi|xác nhận|lưu|hoàn/i }).last().click()
       await expect(dialog()).toHaveCount(0, { timeout: 15_000 })
     }
     const finish = page.getByRole('button', { name: 'Hoàn tất thanh lý' }).first()
@@ -131,7 +135,7 @@ test('hoàn tất thanh lý: hóa đơn trả phòng → chốt → thu → cọ
     await dialog().getByRole('button', { name: /Hoàn tất/ }).last().click()
     await toast(/thanh lý|kết thúc|Đã hoàn tất/i)
     await shot('5-done')
-    expect(await page.locator('main').innerText()).toMatch(/Đã kết thúc/)
+    await expect(page.locator('main')).toContainText(/Đã kết thúc/, { timeout: 15_000 }) // trình duyệt chậm: trang đổi trạng thái sau khi toast hiện
   })
 
   await testInfo.attach('issues.txt', { body: issues.join('\n') || '(không có)', contentType: 'text/plain' })

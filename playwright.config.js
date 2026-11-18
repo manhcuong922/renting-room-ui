@@ -13,6 +13,8 @@ export default defineConfig({
   fullyParallel: false,
   reporter: [['list']],
   use: {
+    // E2E_BROWSER=chromium|firefox|webkit — mặc định chromium.
+    browserName: process.env.E2E_BROWSER ?? 'chromium',
     baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:5173',
     headless: !headed,
     viewport: { width: 1360, height: 860 },

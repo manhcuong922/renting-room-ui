@@ -99,6 +99,7 @@ test('hộp thoại chính ở điện thoại không vỡ bố cục', async ({
   await run('Phòng-thêm', async () => {
     await go(page, '/rooms')
     const add = page.getByRole('button', { name: /Thêm phòng|Tạo phòng/ }).first()
+    await add.waitFor({ timeout: 10_000 }).catch(() => {}) // trình duyệt chậm vẽ nút hơn networkidle
     if (!(await add.count())) throw new Error('không thấy nút thêm phòng ở trang Phòng')
     await add.click()
     await expect(page.locator('dialog[open]')).toBeVisible()

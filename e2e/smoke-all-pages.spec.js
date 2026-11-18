@@ -29,6 +29,8 @@ const DETAIL_SOURCES = [
 const IGNORED_STATUS = new Set([401, 403, 404, 409, 422])
 
 async function login(page) {
+  // E2E_THEME=dark|light: quét toàn bộ trang ở chế độ giao diện đó (mặc định theo hệ điều hành = sáng).
+  if (process.env.E2E_THEME) await page.addInitScript((theme) => localStorage.setItem('rr-theme', theme), process.env.E2E_THEME)
   await page.goto('/login')
   await page.getByLabel('Số điện thoại hoặc email').fill(OWNER.phone)
   await page.getByRole('textbox', { name: 'Mật khẩu' }).fill(OWNER.password)
@@ -97,8 +99,13 @@ for (const vp of VIEWPORTS) {
 
       for (const src of DETAIL_SOURCES) {
         await go(page, src.list)
-        const hrefs = await page.locator('a[href]').evaluateAll((as) => as.map((a) => a.getAttribute('href')))
-        const href = hrefs.find((h) => src.href.test(h))
+        // Firefox / WebKit vẽ danh sách chậm hơn "networkidle": chờ tới 10 giây cho liên kết chi tiết xuất hiện.
+        let href
+        for (let attempt = 0; attempt < 20 && !href; attempt++) {
+          const hrefs = await page.locator('a[href]').evaluateAll((as) => as.map((a) => a.getAttribute('href')))
+          href = hrefs.find((h) => src.href.test(h))
+          if (!href) await page.waitForTimeout(500)
+        }
         if (href) await visit(href)
         else if (src.list !== '/contract-templates') issues.push(`[${src.list}] không tìm thấy liên kết chi tiết để kiểm`) // dữ liệu demo chưa có mẫu HĐ
       }
