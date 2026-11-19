@@ -30,7 +30,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           # Cùng bản Node / npm với máy dev: lock file do npm 11 tạo thì npm 10 (Node 22) báo thiếu gói khi `npm ci`.
           node-version: 24
