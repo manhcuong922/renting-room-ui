@@ -17,7 +17,12 @@ async function go(page, path) {
 
 /** Chọn khu theo mã (vd. "A") thay vì thứ tự — thứ tự danh sách khu không cố định. */
 async function pickProperty(select, code) {
-  const label = (await select.locator('option').allTextContents()).find((t) => t.trim().startsWith(`${code} —`))
+  // Danh sách khu nạp sau khi trang mở (chậm hơn ở WebKit): chờ tới 10 giây cho khu cần chọn xuất hiện.
+  let label
+  for (let attempt = 0; attempt < 20 && !label; attempt++) {
+    label = (await select.locator('option').allTextContents()).find((t) => t.trim().startsWith(`${code} —`))
+    if (!label) await select.page().waitForTimeout(500)
+  }
   if (!label) throw new Error(`không có khu ${code} trong danh sách`)
   await select.selectOption({ label })
 }

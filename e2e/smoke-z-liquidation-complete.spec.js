@@ -1,11 +1,11 @@
 import { expect, test } from '@playwright/test'
 
-// Hoàn tất thanh lý trên UI thật, bắt đầu từ HĐ đang thanh lý sẵn của dữ liệu demo (A·105, HD2026-0017):
+// Hoàn tất thanh lý trên UI thật, bắt đầu từ HĐ đang thanh lý sẵn của dữ liệu demo (A·215, HD2026-0019):
 // lập hóa đơn trả phòng → chốt → thu → xử lý cọc → hoàn tất. GHI dữ liệu — chỉ chạy trên DB seed dùng một lần.
 // Chạy: E2E_HEADLESS=1 npx playwright test e2e/smoke-liquidation-complete.spec.js   (API :5213 vừa seed + UI :5173)
 const OWNER = { phone: '0900000009', password: 'ChuTroDemo2026' }
 const IGNORED_STATUS = new Set([401, 403, 404, 409, 422])
-const CONTRACT_NO = 'HD2026-0017'
+const CONTRACT_NO = 'HD2026-0019'
 
 test.use({ actionTimeout: 15_000 })
 test.setTimeout(180_000)
@@ -132,6 +132,9 @@ test('hoàn tất thanh lý: hóa đơn trả phòng → chốt → thu → cọ
     }
     await finish.click()
     await shot('4-complete-dialog')
+    // Tiền trả lại người thuê và khoản chưa xử lý phải được xác nhận ngay trong hộp thoại (thiết kế: xử lý một lần).
+    const boxes = dialog().getByRole('checkbox')
+    for (let i = 0; i < (await boxes.count()); i++) await boxes.nth(i).check()
     await dialog().getByRole('button', { name: /Hoàn tất/ }).last().click()
     await toast(/thanh lý|kết thúc|Đã hoàn tất/i)
     await shot('5-done')

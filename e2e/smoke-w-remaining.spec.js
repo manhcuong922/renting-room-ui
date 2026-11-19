@@ -106,8 +106,8 @@ test('luồng phụ: phát sinh, báo trả phòng, hủy nháp, công tơ, kho�
   })
 
   // ------------------------------------------------------------- Báo trả phòng / rút báo
-  await run('Báo trả phòng HD2026-0012', async () => {
-    await openContract('HD2026-0012')
+  await run('Báo trả phòng HD2026-0018', async () => {
+    await openContract('HD2026-0018')
     await page.getByRole('button', { name: 'Báo trả phòng' }).first().click()
     await expect(dialog().getByText('Ghi nhận báo trả phòng')).toBeVisible()
     await dialog().getByLabel('Dự kiến trả phòng').fill(isoPlusDays(15))

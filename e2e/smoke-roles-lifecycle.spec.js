@@ -149,8 +149,8 @@ test('vòng đời hợp đồng: chuyển phòng, thanh lý', async ({ page }, 
     await page.screenshot({ path: 'test-results/rl-transfer-dialog.png' })
     const room = dialog.getByLabel('Chuyển sang phòng')
     await expect(room).toBeVisible()
-    const options = await room.locator('option:not([value=""])').all()
-    expect(options.length, 'không có phòng trống để chuyển').toBeGreaterThan(0)
+    // Danh sách phòng trống nạp sau khi hộp thoại mở (chậm hơn ở Firefox / WebKit): chờ tới 10 giây.
+    await expect.poll(async () => (await room.locator('option:not([value=""])').count()), { timeout: 10_000, message: 'không có phòng trống để chuyển' }).toBeGreaterThan(0)
     await room.selectOption({ index: 1 })
     await fillLatestReadings(dialog)
     await dialog.getByRole('button', { name: /^Chuyển phòng$/ }).last().click()

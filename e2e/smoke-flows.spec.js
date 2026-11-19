@@ -61,8 +61,8 @@ test('luồng tương tác chính', async ({ page }, testInfo) => {
   await run('Hợp đồng: bộ lọc nhanh + tab + tìm kiếm', async () => {
     await go(page, '/contracts')
     const quick = page.getByLabel('Bộ lọc nhanh')
+    await expect.poll(async () => await quick.locator('option').count(), { timeout: 10_000 }).toBeGreaterThanOrEqual(6)
     const options = await quick.locator('option').allTextContents()
-    expect(options.length).toBeGreaterThanOrEqual(6)
     for (const label of options) {
       await quick.selectOption({ label })
       await page.waitForLoadState('networkidle')

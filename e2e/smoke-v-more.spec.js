@@ -75,17 +75,22 @@ test('nhập/xuất Excel, mẫu hợp đồng, thành viên, tạo khu & phòng
     await input.setInputFiles(path.join(FIXTURES, 'import-tenancies.xlsx'))
     await expect(page.getByText(/Đã đọc 3 dòng/).first()).toBeVisible({ timeout: 20_000 })
     await shot('3-import-tenancies-preview')
+    // Chờ đúng phản hồi lưu (thông báo "Đã lưu" của bước nhập phòng trước đó có thể còn trên màn hình ⇒ không dựa vào chữ).
+    const saved = page.waitForResponse((r) => r.request().method() === 'POST' && /import/i.test(r.url()) && !/preview|validate/i.test(r.url()), { timeout: 30_000 })
     await page.getByRole('button', { name: /^Lưu \d+ dòng$/ }).last().click()
-    await expect(page.getByText(/Đã lưu|lưu xong|đã lưu/i).first()).toBeVisible({ timeout: 25_000 })
+    expect((await saved).status()).toBeLessThan(300)
+    await page.waitForLoadState('networkidle')
     await shot('4-import-tenancies-saved')
   })
 
   await run('Nhập Excel: phòng T01 có hợp đồng đang hiệu lực', async () => {
-    await go(page, '/contracts')
-    await page.getByLabel('Tìm số hợp đồng').fill('')
-    await page.getByRole('tab', { name: 'Đang hiệu lực' }).click()
-    await page.waitForLoadState('networkidle')
-    await expect(main()).toContainText('T01', { timeout: 10_000 })
+    // Danh sách hợp đồng có thể còn là bản cache cũ (WebKit chậm làm mới): thử lại vài lần, mỗi lần tải lại danh sách.
+    await expect(async () => {
+      await go(page, '/contracts')
+      await page.getByRole('tab', { name: 'Đang hiệu lực' }).click()
+      await page.waitForLoadState('networkidle')
+      await expect(main()).toContainText('T01', { timeout: 3_000 })
+    }).toPass({ timeout: 25_000 })
     await expect(main()).toContainText('Phạm Thị Nhập Thử')
   })
 
