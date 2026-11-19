@@ -11,6 +11,7 @@ import { addMonths, formatDate, todayVN } from '@/lib/format'
 import { getErrorMessage } from '@/lib/http/ApiError'
 import { dateError, formatReading, readingError } from '../meterRules'
 import styles from './PropertyMetersTab.module.css'
+import { focusNextOnEnter } from '@/lib/focusNext'
 
 const MODES = [
   { value: 'install', label: 'Lắp hàng loạt' },
@@ -89,7 +90,7 @@ function BulkInstallGrid({ property, fee, rows }) {
     {
       key: 'serial',
       header: 'Số serial',
-      cell: (r) => <TextField aria-label={`Serial phòng ${r.roomCode}`} maxLength={50} value={inputs[r.roomId]?.serialNo ?? ''} onChange={(e) => set(r.roomId, { serialNo: e.target.value })} />,
+      cell: (r) => <TextField aria-label={`Serial phòng ${r.roomCode}`} data-grid="install" enterKeyHint="next" onKeyDown={focusNextOnEnter} maxLength={50} value={inputs[r.roomId]?.serialNo ?? ''} onChange={(e) => set(r.roomId, { serialNo: e.target.value })} />,
     },
     {
       key: 'initial',
@@ -97,6 +98,9 @@ function BulkInstallGrid({ property, fee, rows }) {
       cell: (r) => (
         <NumberField
           aria-label={`Chỉ số ban đầu phòng ${r.roomCode}`}
+          data-grid="install"
+          enterKeyHint="next"
+          onKeyDown={focusNextOnEnter}
           decimals={2}
           placeholder="Bỏ trống = không lắp"
           error={errors[r.roomId]}

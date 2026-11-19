@@ -236,6 +236,12 @@ export default function ContractDetailPage() {
                       Hủy nháp
                     </Button>
                   )}
+                  {/* Thu tiền: thao tác hằng ngày — đứng đầu (sau Kích hoạt / Sửa nháp của hợp đồng nháp). */}
+                  {a.collect && (
+                    <Button variant="secondary" icon={HandCoins} onClick={() => setDialog('balance')}>
+                      Thu tiền
+                    </Button>
+                  )}
                   {a.changeRent && (
                     <Button variant="secondary" icon={Coins} onClick={() => setDialog('rent')}>
                       Sửa giá thuê
@@ -254,11 +260,6 @@ export default function ContractDetailPage() {
                   {a.notice && (
                     <Button variant="secondary" icon={CalendarClock} onClick={() => setDialog('notice')}>
                       Báo trả phòng
-                    </Button>
-                  )}
-                  {a.collect && (
-                    <Button variant="secondary" icon={HandCoins} onClick={() => setDialog('balance')}>
-                      Thu tiền
                     </Button>
                   )}
                   {a.transferRoom && (

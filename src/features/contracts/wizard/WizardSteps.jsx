@@ -1,4 +1,5 @@
 import { FileStack, Plus, Trash } from 'lucide-react'
+import { useState } from 'react'
 import { Link } from 'react-router'
 import {
   Alert,
@@ -85,7 +86,9 @@ export function RoomStep({ form, onSelectRoom, locked }) {
   const v = form.values
   const properties = usePropertyOptions()
   const rooms = usePropertyRooms(v.propertyId)
-  const selectable = (rooms.data ?? []).filter((r) => ['Vacant', 'Reserved', 'Maintenance'].includes(r.status))
+  // Phòng trống lên trước, rồi giữ chỗ, cuối cùng phòng đang bảo trì (tạo nháp được nhưng chưa kích hoạt được) — sort ổn định giữ thứ tự số phòng.
+  const ORDER = { Vacant: 0, Reserved: 1, Maintenance: 2 }
+  const selectable = (rooms.data ?? []).filter((r) => r.status in ORDER).sort((a, b) => ORDER[a.status] - ORDER[b.status])
 
   if (locked) {
     return <Alert tone="info">Không đổi được phòng của hợp đồng nháp. Muốn đổi phòng: hủy nháp và tạo hợp đồng mới.</Alert>
@@ -137,19 +140,22 @@ function propertyBillingText(property) {
 }
 
 /** Bước 3 — thời hạn, giá, cọc (gợi ý từ phòng), tính tiền từ ngày; kỳ thu theo cài đặt của khu. */
+// Ô ít dùng của bước Điều khoản — gom vào "Tùy chọn khác" (mặc định thu gọn) để màn chính chỉ còn thời hạn, giá, cọc.
+const OPTIONAL_TERM_FIELDS = ['signedDate', 'signedPlace', 'effectiveDate', 'contractNo', 'copiesCount', 'billingStartDate', 'noticeDays', 'note']
+const OPTIONAL_TERM_TEXT = ['signedDate', 'signedPlace', 'effectiveDate', 'contractNo', 'billingStartDate', 'note']
+
 export function TermsStep({ form, template, room, property, creating }) {
   const v = form.values
+  // Mở sẵn khi đã điền (sửa nháp, nhập từ sổ cũ); luôn mở khi có ô trong đó đang báo lỗi — không giấu lỗi sau mục thu gọn.
+  const [moreOpen, setMoreOpen] = useState(() => OPTIONAL_TERM_TEXT.some((k) => v[k]))
+  const moreHasError = OPTIONAL_TERM_FIELDS.some((k) => form.errors[k])
   return (
     <>
       <FormSection title="Thời hạn">
         <FormGrid cols={3}>
-          <DateField label="Ngày bắt đầu" required hint="Không trước hôm nay quá 1 năm (HĐ từ sổ cũ: tới 10 năm, điền “Tính tiền từ ngày”)" {...form.field('startDate')} />
+          <DateField label="Ngày bắt đầu" required hint="Không trước hôm nay quá 1 năm (HĐ từ sổ cũ: tới 10 năm, điền “Tính tiền từ ngày” ở Tùy chọn khác)" {...form.field('startDate')} />
           <DateField label="Ngày kết thúc" required={!v.indefinite} disabled={v.indefinite} {...form.field('endDate')} />
           <CheckboxField label="Không thời hạn" {...form.field('indefinite', { type: 'checkbox' })} />
-          <DateField label="Ngày ký" hint="Trống = tự xác định khi kích hoạt" {...form.field('signedDate')} />
-          <TextField label="Nơi ký" maxLength={200} {...form.field('signedPlace')} />
-          <DateField label="Ngày hiệu lực" hint="Trống = ngày ký" {...form.field('effectiveDate')} />
-          {creating && <TextField label="Số hợp đồng" maxLength={30} hint="Trống = tự sinh HD{năm}-{0001}" {...form.field('contractNo')} />}
         </FormGrid>
       </FormSection>
 
@@ -166,7 +172,6 @@ export function TermsStep({ form, template, room, property, creating }) {
           ) : (
             <MoneyField label="Tiền cọc" hint="0 = không cọc; tối đa 12 tháng tiền thuê" {...form.field('depositAmount', { type: 'value' })} />
           )}
-          <NumberField label="Số bản hợp đồng" {...form.field('copiesCount', { type: 'value' })} />
           {!template?.noDeposit && <TextAreaField label="Điều kiện hoàn cọc" rows={2} maxLength={5000} className="span-full" {...form.field('depositTerms')} />}
           <CheckboxGroup
             label="Phương thức thanh toán"
@@ -179,23 +184,38 @@ export function TermsStep({ form, template, room, property, creating }) {
         </FormGrid>
       </FormSection>
 
-      <FormSection
-        title="Kỳ thu"
-        description={`Theo cài đặt của khu (mọi hợp đồng dùng chung): ${propertyBillingText(property) ?? '…'}. Đổi ở tab Kỳ thu của khu.`}
-      >
-        <FormGrid cols={3}>
-          <DateField
-            label="Tính tiền từ ngày"
-            hint="Trống = ngày bắt đầu. Dùng cho HĐ nhập từ sổ cũ / cho ở miễn phí vài ngày đầu — trước ngày này không tính tiền (cả điện nước)"
-            {...form.field('billingStartDate')}
-          />
-          <NumberField label="Báo trước khi trả phòng" suffix="ngày" hint="Gợi ý từ khu" {...form.field('noticeDays', { type: 'value' })} />
-        </FormGrid>
-      </FormSection>
+      <p className={styles.muted} style={{ marginTop: 'var(--space-3)' }}>
+        Kỳ thu theo cài đặt của khu (mọi hợp đồng dùng chung): {propertyBillingText(property) ?? '…'}. Đổi ở tab Kỳ thu của khu.
+      </p>
 
-      <FormSection title="Ghi chú nội bộ">
-        <TextAreaField label="Ghi chú" rows={2} {...form.field('note')} />
-      </FormSection>
+      <details className={styles.more} open={moreOpen || moreHasError} onToggle={(e) => setMoreOpen(e.currentTarget.open)}>
+        <summary>
+          <strong>Tùy chọn khác</strong>
+          <span className={styles.muted}>Ngày ký, nơi ký, số hợp đồng, số bản, tính tiền từ ngày, báo trước khi trả phòng, ghi chú — bỏ trống thì app tự điền</span>
+        </summary>
+        <FormSection title="Ký hợp đồng">
+          <FormGrid cols={3}>
+            <DateField label="Ngày ký" hint="Trống = tự xác định khi kích hoạt" {...form.field('signedDate')} />
+            <TextField label="Nơi ký" maxLength={200} {...form.field('signedPlace')} />
+            <DateField label="Ngày hiệu lực" hint="Trống = ngày ký" {...form.field('effectiveDate')} />
+            {creating && <TextField label="Số hợp đồng" maxLength={30} hint="Trống = tự sinh HD{năm}-{0001}" {...form.field('contractNo')} />}
+            <NumberField label="Số bản hợp đồng" {...form.field('copiesCount', { type: 'value' })} />
+          </FormGrid>
+        </FormSection>
+        <FormSection title="Tính tiền & trả phòng">
+          <FormGrid cols={3}>
+            <DateField
+              label="Tính tiền từ ngày"
+              hint="Trống = ngày bắt đầu. Dùng cho HĐ nhập từ sổ cũ / cho ở miễn phí vài ngày đầu — trước ngày này không tính tiền (cả điện nước)"
+              {...form.field('billingStartDate')}
+            />
+            <NumberField label="Báo trước khi trả phòng" suffix="ngày" hint="Gợi ý từ khu" {...form.field('noticeDays', { type: 'value' })} />
+          </FormGrid>
+        </FormSection>
+        <FormSection title="Ghi chú nội bộ">
+          <TextAreaField label="Ghi chú" rows={2} {...form.field('note')} />
+        </FormSection>
+      </details>
     </>
   )
 }

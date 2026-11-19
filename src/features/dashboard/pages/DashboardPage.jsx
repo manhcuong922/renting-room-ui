@@ -1,5 +1,5 @@
 import { useQueries } from '@tanstack/react-query'
-import { Building, CalendarClock, CircleAlert, DoorOpen, HandCoins, TriangleAlert } from 'lucide-react'
+import { Building, CalendarClock, ChevronRight, CircleAlert, DoorOpen, FilePlus, FileText, Gauge, HandCoins, Send, TriangleAlert, Wallet } from 'lucide-react'
 import { Link } from 'react-router'
 import { contractsApi, invoicesApi, propertiesApi, queryKeys, roomsApi } from '@/api'
 import { Card, PageHeader, Spinner } from '@/components/ui'
@@ -33,7 +33,7 @@ const STATS = [
     id: 'expiring',
     label: 'HĐ hết hạn trong 30 ngày',
     icon: CalendarClock,
-    to: '/contracts',
+    to: '/contracts?quick=expiring',
     tone: 'warning',
     query: () => {
       const params = { ...COUNT, expiringWithinDays: 30 }
@@ -44,7 +44,7 @@ const STATS = [
     id: 'overdue',
     label: 'HĐ quá hạn',
     icon: TriangleAlert,
-    to: '/contracts',
+    to: '/contracts?quick=overdue',
     tone: 'danger',
     query: () => {
       const params = { ...COUNT, overdue: true }
@@ -72,13 +72,104 @@ const STATS = [
   },
 ]
 
+// Việc đang tồn đọng — chỉ hiện dòng có số > 0, bấm vào là tới đúng danh sách cần xử lý.
+const TODOS = [
+  {
+    id: 'draftInvoices',
+    icon: FileText,
+    label: (n) => `${n} phiếu nháp chờ chốt`,
+    hint: 'Kiểm tra rồi chốt để gửi người thuê',
+    to: '/invoices?allMonths=1&status=Draft',
+    query: () => {
+      const params = { ...COUNT, status: 'Draft' }
+      return { queryKey: queryKeys.invoices.list(params), queryFn: ({ signal }) => invoicesApi.list(params, { signal }) }
+    },
+  },
+  {
+    id: 'resend',
+    icon: Send,
+    label: (n) => `${n} phiếu cần gửi lại`,
+    hint: 'Phiếu đã sửa sau khi gửi — gửi bản mới cho người thuê',
+    to: '/invoices?allMonths=1&needsResend=1',
+    query: () => {
+      const params = { ...COUNT, needsResend: true }
+      return { queryKey: queryKeys.invoices.list(params), queryFn: ({ signal }) => invoicesApi.list(params, { signal }) }
+    },
+  },
+  {
+    id: 'liquidating',
+    icon: Wallet,
+    label: (n) => `${n} hợp đồng đang thanh lý`,
+    hint: 'Lập hóa đơn trả phòng, xử lý cọc rồi hoàn tất',
+    to: '/contracts?status=Liquidating',
+    query: () => {
+      const params = { ...COUNT, status: 'Liquidating' }
+      return { queryKey: queryKeys.contracts.list(params), queryFn: ({ signal }) => contractsApi.list(params, { signal }) }
+    },
+  },
+  {
+    id: 'draftContracts',
+    icon: FilePlus,
+    label: (n) => `${n} hợp đồng nháp chưa kích hoạt`,
+    hint: 'Kích hoạt khi bàn giao phòng, hoặc xóa nếu không thuê nữa',
+    to: '/contracts?status=Draft',
+    query: () => {
+      const params = { ...COUNT, status: 'Draft' }
+      return { queryKey: queryKeys.contracts.list(params), queryFn: ({ signal }) => contractsApi.list(params, { signal }) }
+    },
+  },
+]
+
+const SHORTCUTS = [
+  { to: '/meter-readings', icon: Gauge, label: 'Ghi chỉ số' },
+  { to: '/invoices', icon: FileText, label: 'Phiếu tiền phòng' },
+  { to: '/invoices?allMonths=1&unpaidOnly=1', icon: HandCoins, label: 'Thu tiền' },
+  { to: '/contracts/new', icon: FilePlus, label: 'Tạo hợp đồng' },
+]
+
 export default function DashboardPage() {
   const { user } = useAuth()
   const results = useQueries({ queries: STATS.map((stat) => stat.query()) })
+  const todoResults = useQueries({ queries: TODOS.map((todo) => todo.query()) })
+  const todos = TODOS.map((todo, i) => ({ ...todo, count: todoResults[i].data?.totalCount ?? 0 })).filter((todo) => todo.count > 0)
+  const todosLoading = todoResults.some((r) => r.isPending)
 
   return (
     <>
       <PageHeader title={`Xin chào, ${user.fullName}`} description={user.organization?.name} />
+
+      <nav aria-label="Lối tắt" className={styles.shortcuts}>
+        {SHORTCUTS.map(({ to, icon: Icon, label }) => (
+          <Link key={to} to={to} className={styles.shortcut}>
+            <Icon size={18} aria-hidden />
+            <span>{label}</span>
+          </Link>
+        ))}
+      </nav>
+
+      <Card className={styles.todoCard}>
+        <h2 className={styles.todoTitle}>Cần xử lý</h2>
+        {todosLoading ? (
+          <Spinner size={18} />
+        ) : todos.length === 0 ? (
+          <p className={styles.todoEmpty}>Không có việc tồn đọng.</p>
+        ) : (
+          <ul className={styles.todoList}>
+            {todos.map(({ id, icon: Icon, label, hint, to, count }) => (
+              <li key={id}>
+                <Link to={to} className={styles.todo}>
+                  <Icon size={18} aria-hidden className={styles.todoIcon} />
+                  <span className={styles.todoText}>
+                    <strong>{label(count.toLocaleString('vi-VN'))}</strong>
+                    <span>{hint}</span>
+                  </span>
+                  <ChevronRight size={18} aria-hidden className={styles.todoChevron} />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
 
       <ul className={styles.stats}>
         {STATS.map((stat, index) => {

@@ -62,3 +62,25 @@
   flex-wrap: wrap;
   gap: var(--space-2);
 }
+
+/* Điện thoại, trang nhiều thao tác (≥ 7 nút — chi tiết hợp đồng): một hàng cuộn ngang thay vì 4 hàng nút đẩy nội dung xuống dưới.
+   Mép phải mờ dần để thấy còn nút phía sau. */
+@media (max-width: 767px) {
+  .actions:has(> :nth-child(7)) {
+    flex-wrap: nowrap;
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: var(--space-1);
+    scrollbar-width: none;
+    mask-image: linear-gradient(to right, #000 85%, transparent);
+  }
+
+  .actions:has(> :nth-child(7))::-webkit-scrollbar {
+    display: none;
+  }
+
+  .actions:has(> :nth-child(7)) > * {
+    flex: none;
+    white-space: nowrap;
+  }
+}

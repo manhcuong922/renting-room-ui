@@ -156,3 +156,55 @@
     padding: var(--space-3);
   }
 }
+
+/* Dải tóm tắt tiền: Tổng phiếu · Đã thu · Còn nợ — ba ô một hàng, cả trên điện thoại. */
+.moneyStrip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: var(--space-2);
+  margin: 0 0 var(--space-4);
+}
+
+.moneyStrip > div {
+  min-width: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.moneyStrip dt {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
+
+.moneyStrip dd {
+  margin: 2px 0 0;
+  font-size: clamp(0.95rem, 4.2vw, var(--text-xl));
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.moneyDue {
+  border-color: var(--color-warning) !important;
+  background: var(--color-warning-soft) !important;
+}
+
+.moneyDue dd {
+  color: var(--color-warning);
+}
+
+.moneyOverdue {
+  border-color: var(--color-danger) !important;
+  background: var(--color-danger-soft) !important;
+}
+
+.moneyOverdue dd {
+  color: var(--color-danger);
+}
+
+.moneyDone dd {
+  color: var(--color-success);
+}

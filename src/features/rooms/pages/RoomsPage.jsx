@@ -114,7 +114,7 @@ export default function RoomsPage() {
           value={params.propertyId}
           onChange={(e) => set({ propertyId: e.target.value })}
         />
-        <SelectField aria-label="Trạng thái" placeholder="Mọi trạng thái (trừ ngừng dùng)" options={STATUS_OPTIONS} value={params.status} onChange={(e) => set({ status: e.target.value })} />
+        <SelectField aria-label="Trạng thái" placeholder="Mọi trạng thái" options={STATUS_OPTIONS} value={params.status} onChange={(e) => set({ status: e.target.value })} />
         <TextField aria-label="Tầng" placeholder="Tầng" value={params.floor} maxLength={10} onChange={(e) => set({ floor: e.target.value.trim() })} />
         <CheckboxField label="Quá hạn thanh toán" checked={params.overdue} onChange={(e) => set({ overdue: e.target.checked })} />
         <RadioGroup options={VIEW_OPTIONS} value={params.view} onChange={(view) => set({ view })} />

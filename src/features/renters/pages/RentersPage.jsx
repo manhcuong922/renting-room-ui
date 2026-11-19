@@ -120,7 +120,7 @@ export default function RentersPage() {
               value={params.propertyId}
               onChange={(e) => set({ propertyId: e.target.value })}
             />
-            <SelectField aria-label="Tình trạng ở" placeholder="Đang ở hoặc không" options={STAYING_OPTIONS} value={params.staying} onChange={(e) => set({ staying: e.target.value })} />
+            <SelectField aria-label="Tình trạng ở" placeholder="Mọi tình trạng" options={STAYING_OPTIONS} value={params.staying} onChange={(e) => set({ staying: e.target.value })} />
             <CheckboxField label="Hiện cả hồ sơ đã ẩn" checked={params.archived} onChange={(e) => set({ archived: e.target.checked })} />
           </>
         )}

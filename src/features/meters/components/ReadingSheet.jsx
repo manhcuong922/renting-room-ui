@@ -9,6 +9,7 @@ import { formatDate, formatDayMonth, todayVN } from '@/lib/format'
 import { getErrorMessage } from '@/lib/http/ApiError'
 import { dateError, formatReading, validReading, VIEW_FILTERS } from '../meterRules'
 import styles from '../pages/MeterReadingSheetPage.module.css'
+import { focusNextOnEnter } from '@/lib/focusNext'
 
 const rowKey = (r) => `${r.meterId}|${r.contractId}|${r.closingPeriodStart}`
 
@@ -157,6 +158,9 @@ export function ReadingSheet({ propertyId, billingMonth, rows: allRows, view }) 
           <div className={styles.inputCell}>
             <NumberField
               aria-label={`Chỉ số mới ${r.feeTypeName} phòng ${r.roomCode}`}
+              data-grid="readings"
+              enterKeyHint="next"
+              onKeyDown={focusNextOnEnter}
               decimals={2}
               suffix={r.unit}
               disabled={r.locked}

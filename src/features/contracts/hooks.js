@@ -14,6 +14,8 @@ export function useContract(id) {
     queryKey: queryKeys.contracts.detail(id),
     queryFn: ({ signal }) => contractsApi.get(id, { signal }),
     enabled: Boolean(id),
+    // Rời trang là bỏ bản lưu: vào lại luôn thấy dữ liệu mới (trạng thái, cọc, thanh lý đổi liên tục), không thoáng hiện bản cũ.
+    gcTime: 0,
   })
 }
 

@@ -77,7 +77,13 @@ export function MoveOccupantDialog({ contract: c, occupant, onClose, onDone }) {
     queryKey: queryKeys.contracts.list({ status: 'Active', pageSize: 100, moveTargets: true }),
     queryFn: ({ signal }) => contractsApi.list({ status: 'Active', page: 1, pageSize: 100 }, { signal }),
   })
-  const options = (targets.data?.items ?? []).filter((t) => t.id !== c.id).map((t) => ({ value: t.id, label: `${t.propertyCode}-${t.roomCode} · ${t.contractNo} — ${t.representativeName}` }))
+  const items = (targets.data?.items ?? []).filter((t) => t.id !== c.id)
+  const startOf = (id) => items.find((t) => t.id === id)?.startDate
+  // Hợp đồng đích chưa bắt đầu (VD ký trước, bắt đầu ngày mai) vẫn chọn được nhưng ghi rõ ngày bắt đầu — chọn ngày chuyển từ đó trở đi.
+  const options = items.map((t) => ({
+    value: t.id,
+    label: `${t.propertyCode}-${t.roomCode} · ${t.contractNo} — ${t.representativeName}${t.startDate && t.startDate > todayVN() ? ` (bắt đầu ${formatDate(t.startDate)})` : ''}`,
+  }))
   return (
     <FormDialog
       title={`Chuyển ${occupant.fullName} sang phòng khác`}
@@ -85,7 +91,13 @@ export function MoveOccupantDialog({ contract: c, occupant, onClose, onDone }) {
       initial={{ toContractId: '', date: todayVN(), role: 'Resident', relationshipType: '', relationship: '', guardianConsent: false, note: '' }}
       validate={(v) => ({
         toContractId: !v.toContractId ? 'Chọn hợp đồng / phòng đích.' : null,
-        date: !v.date ? 'Chọn ngày.' : v.date < occupant.moveInDate ? 'Không trước ngày vào ở.' : null,
+        date: !v.date
+          ? 'Chọn ngày.'
+          : v.date < occupant.moveInDate
+            ? 'Không trước ngày vào ở.'
+            : startOf(v.toContractId) && v.date < startOf(v.toContractId)
+              ? `Hợp đồng đích bắt đầu từ ${formatDate(startOf(v.toContractId))} — chọn ngày chuyển từ ngày đó.`
+              : null,
       })}
       codeFields={{
         MOVE_SAME_CONTRACT: 'toContractId',

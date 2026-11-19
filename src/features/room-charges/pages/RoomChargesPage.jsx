@@ -37,9 +37,10 @@ export default function RoomChargesPage() {
           value={params.propertyId}
           onChange={(e) => set({ propertyId: e.target.value })}
         />
+        {/* Hai ô ngày liền nhau để cùng một hàng trên điện thoại. */}
+        <DateField label="Phát sinh từ ngày" value={params.from} onChange={(e) => set({ from: e.target.value })} />
+        <DateField label="Đến ngày" error={invalidRange ? 'Phải từ ngày bắt đầu trở đi.' : null} value={params.to} onChange={(e) => set({ to: e.target.value })} />
         <SelectField aria-label="Trạng thái" placeholder="Mọi trạng thái" options={STATUS_OPTIONS} value={params.status} onChange={(e) => set({ status: e.target.value })} />
-        <DateField aria-label="Phát sinh từ ngày" value={params.from} onChange={(e) => set({ from: e.target.value })} />
-        <DateField aria-label="Đến ngày" error={invalidRange ? 'Phải từ ngày bắt đầu trở đi.' : null} value={params.to} onChange={(e) => set({ to: e.target.value })} />
       </Toolbar>
 
       {!invalidRange && (

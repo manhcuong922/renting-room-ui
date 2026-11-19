@@ -197,3 +197,40 @@
   justify-content: space-between;
   margin-bottom: var(--space-2);
 }
+
+/* "Tùy chọn khác" của bước Điều khoản — khối thu gọn, bấm cả dòng để mở. */
+.more {
+  margin-top: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.more > summary {
+  display: grid;
+  gap: 2px;
+  padding: var(--space-3) var(--space-4);
+  cursor: pointer;
+  list-style: none;
+}
+
+.more > summary::-webkit-details-marker {
+  display: none;
+}
+
+.more > summary strong::before {
+  content: '▸ ';
+  color: var(--color-primary);
+}
+
+.more[open] > summary strong::before {
+  content: '▾ ';
+}
+
+.more[open] > summary {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.more > :not(summary) {
+  padding: var(--space-4);
+}

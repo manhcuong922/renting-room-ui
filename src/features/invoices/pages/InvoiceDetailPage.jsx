@@ -213,6 +213,12 @@ const refundPreset = (issue) => ({
  * Chi tiết phiếu tiền phòng (docs/api/invoices.md#chi-tiết-phiếu). Nháp: sửa tay, thêm phụ thu / giảm trừ / hoàn trả, tính lại, chốt, xóa.
  * Đã chốt: chỉ đọc — hủy phiếu (chưa thu tiền) hoặc xác nhận hoàn tiền (tổng âm). Mọi lệnh sửa trả lại chi tiết phiếu → cập nhật ngay.
  */
+/** Ô "Còn nợ" của dải tóm tắt: đỏ khi quá hạn, cam khi còn nợ, xanh khi đã đủ. */
+function cxMoney(s) {
+  if (s.outstanding <= 0) return styles.moneyDone
+  return s.paymentStatus === 'Overdue' ? styles.moneyOverdue : styles.moneyDue
+}
+
 export default function InvoiceDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -408,6 +414,28 @@ export default function InvoiceDetailPage() {
                 </Alert>
               )}
             </div>
+
+            {/* Ba con số người thu tiền cần nhất, ngay đầu trang (trước đây "Còn nợ" nằm cuối khối thông tin, tổng tiền ở cuối trang). */}
+            {s.totalAmount >= 0 && (
+              <dl className={styles.moneyStrip} aria-label="Tóm tắt tiền phiếu">
+                <div>
+                  <dt>{draft ? 'Tổng tạm tính' : 'Tổng phiếu'}</dt>
+                  <dd>{formatMoney(s.totalAmount)}</dd>
+                </div>
+                {isFinalized(s) && (
+                  <>
+                    <div>
+                      <dt>Đã thu</dt>
+                      <dd>{formatMoney(s.collectedAmount ?? s.paidAmount)}</dd>
+                    </div>
+                    <div className={cxMoney(s)}>
+                      <dt>Còn nợ</dt>
+                      <dd>{formatMoney(s.outstanding)}</dd>
+                    </div>
+                  </>
+                )}
+              </dl>
+            )}
 
             <Section title="Thông tin phiếu">
               <DescriptionList
