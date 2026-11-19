@@ -32,7 +32,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          # Cùng bản Node / npm với máy dev: lock file do npm 11 tạo thì npm 10 (Node 22) báo thiếu gói khi `npm ci`.
+          node-version: 24
           cache: npm
       - run: npm ci
       - name: Lint

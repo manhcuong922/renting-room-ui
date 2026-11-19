@@ -1,0 +1,14 @@
+# Giữ toàn bộ luật mặc định của gitleaks, chỉ bỏ qua mật khẩu tài khoản DEMO dùng trong test e2e.
+# Các tài khoản này là dữ liệu seed công khai của BE (appsettings.Development.json, docs/guides/demo-data.md),
+# không phải bí mật thật. Chỉ liệt kê đúng giá trị — mật khẩu / token khác lọt vào e2e vẫn bị bắt.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Mật khẩu tài khoản demo của test e2e"
+regexTarget = "secret"
+regexes = [
+  '''^ChuTroDemo2026$''',
+  '''^PhoQuanLy2026$''',
+  '''^MatKhauMoi#Quan2026$''',
+]
