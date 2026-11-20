@@ -229,7 +229,7 @@ export const INVOICE_STATUS = {
 }
 // M11 — docs/api/notifications.md
 export const NOTIFICATION_CHANNEL_LABELS = { Zalo: 'Zalo', Email: 'Email' }
-export const NOTIFICATION_KIND_LABELS = { InvoiceIssued: 'Phiếu mới chốt', OverdueReminder: 'Nhắc nợ', ManualResend: 'Gửi lại' }
+export const NOTIFICATION_KIND_LABELS = { InvoiceIssued: 'Phiếu mới chốt', OverdueReminder: 'Nhắc nợ', ManualResend: 'Gửi lại', Announcement: 'Thông báo chung' }
 export const NOTIFICATION_STATUS = {
   Pending: { label: 'Chờ gửi', tone: 'warning' },
   Sending: { label: 'Đang gửi', tone: 'info' },

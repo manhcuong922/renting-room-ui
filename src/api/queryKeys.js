@@ -45,7 +45,13 @@ export const queryKeys = {
   payments: { all: ['payments'], list: (params) => ['payments', 'list', params], balance: (contractId) => ['payments', 'balance', contractId] },
   renters: { ...resource('renters'), consents: (id) => ['renters', 'consents', id] },
   attachments: { all: ['attachments'], byOwner: (ownerType, ownerId) => ['attachments', 'owner', ownerType, ownerId] },
-  notifications: { all: ['notifications'], channels: ['notifications', 'channels'], byInvoice: (invoiceId) => ['notifications', 'invoice', invoiceId] },
+  notifications: {
+    all: ['notifications'],
+    channels: ['notifications', 'channels'],
+    byInvoice: (invoiceId) => ['notifications', 'invoice', invoiceId],
+    // Không truyền params ⇒ khóa gốc của khu (invalidate mọi trang)
+    announcements: (propertyId, params) => (params ? ['notifications', 'announcements', propertyId, params] : ['notifications', 'announcements', propertyId]),
+  },
   audit: { all: ['audit'], list: (params) => ['audit', 'list', params] },
   contractTemplates: { ...resource('contract-templates'), presets: ['contract-templates', 'presets'] },
   contracts: {
